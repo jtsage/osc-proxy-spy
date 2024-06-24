@@ -83,6 +83,23 @@
   margin-right: 6px!important;
 }
 
+
+.osc-tick-time {
+  color: #fff!important;
+  background-color: RGBA(var(--bs-secondary-rgb),var(--bs-bg-opacity,1))!important;
+  border-radius : 0!important;
+  margin-left: 0!important;
+  margin-right: 0!important;
+  border: 1px solid black;
+}
+.osc-tick-name {
+  color: #ddd!important;
+  background-color: var(--bs-gray-800)!important;
+  border-radius : 0!important;
+  margin-right: 0px!important;
+  border: 1px solid black;
+}
+
 .osc-bundle-stamp-good {
   border-radius : 0!important;
   color: #fff!important;

@@ -16,6 +16,10 @@ class oscConnection extends EventEmitter {
 	outSocket    = false
 	inSocket     = false
 
+	frequencyInterval = null
+	lastSix           = [0, 0, 0, 0, 0, 0]
+
+
 	oscLib = null
 
 	constructor(options) {
@@ -48,8 +52,11 @@ class oscConnection extends EventEmitter {
 			} )
 		} else {
 			try {
+				const thisDate = new Date()
+				this.lastSix.shift()
+				this.lastSix.push(thisDate.getTime())
 				this.emit('message', {
-					date : (new Date()).toISOString(),
+					date : thisDate.toISOString(),
 					name : this.name,
 					...this.oscLib.readPacket(buffer),
 				})
@@ -61,6 +68,22 @@ class oscConnection extends EventEmitter {
 
 	#emitError(err) {
 		this.emit('error', err)
+	}
+
+	#getReceiveFrequency() {
+		let avgDivisor = 0
+		let avgDividend = 0
+		for ( let i = 0; i < this.lastSix.length -1; i++ ) {
+			if ( this.lastSix[i] === 0 ) { continue }
+			avgDividend+= this.lastSix[i+1] - this.lastSix[i]
+			avgDivisor++
+		}
+
+		this.emit(
+			'frequency',
+			( avgDivisor === 0 ) ? 0 : 1000 / Math.round(avgDividend / avgDivisor),
+			( this.lastSix[this.lastSix.length - 1] === 0 ) ? 11000 : (new Date()).getTime() - this.lastSix[this.lastSix.length - 1]
+		)
 	}
 
 	sendOut(buffer) {
@@ -89,7 +112,9 @@ class oscConnection extends EventEmitter {
 		if ( this.portIn !== null ) {
 			this.inSocket = dgram.createSocket({type : 'udp4', reuseAddr : true})
 
-			this.inSocket.on('message', (buffer) => { this.#emitOSC(buffer) } )
+			this.inSocket.on('message', (buffer) => {
+				this.#emitOSC(buffer)
+			})
 			this.inSocket.on('error',   (err) => {
 				this.#emitError(err)
 				this.inSocket.close()
@@ -97,6 +122,8 @@ class oscConnection extends EventEmitter {
 			this.inSocket.on('listening', () => { this.#emitOSC(null) })
 
 			this.inSocket.bind(this.portIn, this.addressIn !== null ? this.addressIn : '0.0.0.0')
+
+			setInterval(() => { this.#getReceiveFrequency() }, 1000)
 		}
 
 		if ( this.portOut !== null ) {

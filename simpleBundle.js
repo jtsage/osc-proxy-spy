@@ -9,7 +9,7 @@
 
 const oscDeviceAddress   = '127.0.0.1'
 const oscDevicePort      = 3333
-const heartBeatFrequency = 1000 // in ms
+const heartBeatFrequency = 333 // in ms
 
 /*
  * Change for installed package

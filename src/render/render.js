@@ -133,7 +133,25 @@ const updateOSCList = () => {
 	}
 }
 
-window.osc.receive('osc-data', (data) => {
+window.osc.receive('osc:tick', (time, since, connectName) => {
+	const timeString  = `${(Math.round(time * 10) / 10).toFixed(1)} m/s`
+	const sinceString = ( since > 10000 ) ? '>10s' : `${(since/1000).toFixed(2)}s`
+	const foundItem = Util.queryF(`[data-tick-time="${connectName}"]`)
+	if ( foundItem !== null ) {
+		foundItem.textContent = timeString
+		Util.queryF(`[data-tick-since="${connectName}"]`).textContent = sinceString
+		return
+	}
+	const thisDiv = document.createElement('div')
+	thisDiv.innerHTML = [
+		`<div class="osc-tick-name">${connectName}</div>`,
+		`<div data-tick-time="${connectName}" class="osc-tick-time">${timeString}</div>`,
+		`<div data-tick-since="${connectName}" class="osc-tick-time">${sinceString}</div>`,
+	].join('')
+	Util.byId('osc-connection-container').appendChild(thisDiv)
+})
+
+window.osc.receive('osc:data', (data) => {
 	if ( data.type === 'osc-message' )     { addOSC(data); return }
 	else if ( data.type === 'osc-bundle' ) {
 		for ( const element of data.elements ) {
@@ -155,6 +173,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function clientDoClear() {
 	Util.byId('osc-data-container').innerHTML = ''
+	Util.byId('osc-connection-container').innerHTML = ''
 }
 
 function clientDoPause() {

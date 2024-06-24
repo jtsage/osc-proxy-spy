@@ -35,7 +35,8 @@ contextBridge.exposeInMainWorld(
 		
 		receive   : ( channel, func ) => {
 			const validChannels = new Set([
-				'osc-data',
+				'osc:data',
+				'osc:tick',
 			])
 		
 			if ( validChannels.has( channel ) ) {
