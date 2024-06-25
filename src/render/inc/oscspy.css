@@ -111,6 +111,11 @@
   background-color: var(--bs-form-invalid-color) !important;
 }
 
+.form-check-input:checked {
+  background-color: var(--bs-green);
+  border-color: var(--bs-success-border-subtle);
+}
+
 div[class^="osc-"],
 div[class*=" osc-"] {
   --bs-badge-padding-x: 0.45em;

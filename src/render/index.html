@@ -7,7 +7,8 @@
 		<link rel="stylesheet" href="inc/bootstrap-icons.css">
 		<link rel="stylesheet" href="inc/oscspy.css">
 		<script src="inc/bootstrap.bundle.min.js"></script>
-		<script src="render.js"></script>
+		<script src="render-osc.js"></script>
+		<script src="render-settings.js"></script>
 	</head>
 	<body data-bs-theme="dark">
 		<div class="container-fluid vh-100">
@@ -87,7 +88,7 @@
 									</div>
 									<div class="mb-3">
 										<label class="form-label text-center" data-i18n-string>Address Limit</label>
-										<input type="text" class="form-control form-control-sm" onkeyup="clientUpdateFilter()" id="address-limit" placeholder="/hello">
+										<input type="text" class="form-control form-control-sm" onkeyup="clientUpdateFilter()" id="address-limit" placeholder="/example/address">
 									</div>
 								</div>
 								<div class="col-9 d-flex flex-column">
@@ -99,7 +100,7 @@
 						</div>
 						<!-- CONNECTION PAGE -->
 						<div class="tab-pane h-100 fade show active mt-2" id="connect-tab-pane" role="tabpanel" aria-labelledby="connect-tab" tabindex="0">
-							<div class="d-flex align-items-start h-100">
+							<div class="d-flex align-items-start h-100 pb-2">
 								<div class="nav flex-column flex-shrink-0 nav-pills me-3 pe-2 border-end border-secondary h-100" id="connect-pills" role="tablist" aria-orientation="vertical">
 									<button class="nav-link active" id="connect-001-tab" data-bs-toggle="pill" data-bs-target="#connect-001" type="button" role="tab" data-i18n-string>Connection #1</button>
 									<button class="nav-link" id="connect-002-tab" data-bs-toggle="pill" data-bs-target="#connect-002" type="button" role="tab" data-i18n-string>Connection #2</button>
@@ -112,65 +113,70 @@
 								</div>
 								<div class="tab-content flex-grow-1 h-100" id="v-pills-tabContent">
 									<div class="tab-pane fade show active h-100" id="connect-001" role="tabpanel" tabindex="0">
-										<form id="connect-001-form" class="h-100 form-control-sm">
-											<div class="row h-100">
+										<form method="post" id="connect-001-form" class="h-100 form-control-sm">
+											<div class="row h-100 align-items-center">
 												<div class="col-3"><label data-i18n-string>Connection Name</label></div>
-												<div class="col-9"><input id="connect-001-name" onblur="Util.byId('connect-001-form').reportValidity()" pattern="[A-Za-z0-9\-]+" title="a-z, A-Z, 0-9, '-'" type="text" class="form-control form-control-sm  w-100"></div>
+												<div class="col-1"><div class="form-check form-switch">
+													<input id="connect-001-active" name="connect-001-active" class="form-check-input" type="checkbox" role="switch">
+												</div></div>
+												<div class="col-8"><input id="connect-001-name" name="connect-001-name" pattern="[A-Za-z0-9\-]+" title="a-z, A-Z, 0-9, '-'" type="text" class="form-control form-control-sm  w-100"></div>
 
 												<div class="col-2"><label data-i18n-string>Listener</label></div>
 												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-in-port" onblur="Util.byId('connect-001-form').reportValidity()" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+												<div class="col-2"><input id="connect-001-in-port" name="connect-001-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
 												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><label>DROPDOWN</label></div>
+												<div class="col-5"><select id="connect-001-in-address" name="connect-001-in-address" class="form-select form-select-sm network-drop"></select></div>
 
 												<div class="col-2"><label data-i18n-string>Sender</label></div>
 												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-out-port" onblur="Util.byId('connect-001-form').reportValidity()" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+												<div class="col-2"><input id="connect-001-out-port" name="connect-001-out-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
 												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><label>INPUT</label></div>
+												<div class="col-5"><input id="connect-001-out-address" name="connect-001-out-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
 
-												<div class="col-10"><label data-i18n-string>Use shared socket (in-port and out-port need to be identical)</label></div>
-												<div class="col-2">CHECK</div>
+												<div class="col-11"><label data-i18n-string>Use shared socket (Listener port and Sender port need to be identical)</label></div>
+												<div class="col-1"><div class="form-check form-switch">
+													<input id="connect-001-shared-socket" name="connect-001-shared-socket" class="form-check-input" type="checkbox" role="switch">
+												</div></div>
 
 												<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Output</span><br>
-												<span class="text-muted fst-italic small" data-i18n-string>Forward received OSC Listener messages to these hosts and ports</span></div>
+												<span class="text-muted fst-italic small" data-i18n-string>OSC Messages received on "Listener" will be sent to these hosts/ports</span></div>
 
 												<div class="col-2"><label data-i18n-string>Proxy #1</label></div>
 												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-001-port" onblur="Util.byId('connect-001-form').reportValidity()" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+												<div class="col-2"><input id="connect-001-proxy-001-port" name="connect-001-proxy-001-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
 												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><label>INPUT</label></div>
+												<div class="col-5"><input id="connect-001-proxy-001-address" name="connect-001-proxy-001-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
 
 												<div class="col-2"><label data-i18n-string>Proxy #2</label></div>
 												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-002-port" onblur="Util.byId('connect-001-form').reportValidity()" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+												<div class="col-2"><input id="connect-001-proxy-002-port" name="connect-001-proxy-002-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
 												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><label>INPUT</label></div>
+												<div class="col-5"><input id="connect-001-proxy-002-address" name="connect-001-proxy-002-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
 
 												<div class="col-2"><label data-i18n-string>Proxy #3</label></div>
 												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-003-port" onblur="Util.byId('connect-001-form').reportValidity()" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+												<div class="col-2"><input id="connect-001-proxy-003-port" name="connect-001-proxy-003-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
 												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><label>INPUT</label></div>
+												<div class="col-5"><input id="connect-001-proxy-003-address" name="connect-001-proxy-003-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
 
 												<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Input</span><br>
-												<span class="text-muted fst-italic small" data-i18n-string>Also listen on this port, send received messages to the Sender Address/Port</span></div>
+												<span class="text-muted fst-italic small" data-i18n-string>Additionally listen on this port, messages received will be sent to "Sender"</span></div>
 
 												<div class="col-2"><label data-i18n-string>Proxy In</label></div>
 												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-in-port" onblur="Util.byId('connect-001-form').reportValidity()" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+												<div class="col-2"><input id="connect-001-proxy-in-port" name="connect-001-proxy-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
 												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><label>DROPDOWN</label></div>
+												<div class="col-5"><select id="connect-001-proxy-in-address" name="connect-001-proxy-in-address" class="form-select form-select-sm network-drop"></select></div>
 
 												<div class="col-12 text-center border-top"><span data-i18n-string>Heartbeat Message</span><br>
 												<span class="text-muted fst-italic small" data-i18n-string>Send this OSC Message every set number of seconds</span></div>
 
 												<div class="col-2"><label data-i18n-string>Time (sec)</label></div>
-												<div class="col-2"><input id="connect-001-heartbeat-time" onblur="Util.byId('connect-001-form').reportValidity()" min="1" max="600" title="1 - 600" type="number" class="form-control-sm form-control w-100"></div>
+												<div class="col-2"><input id="connect-001-heartbeat-time" name="connect-001-heartbeat-time" min="1" max="600" title="1 - 600" type="number" class="form-control-sm form-control w-100"></div>
 												<div class="col-2"><label data-i18n-string>Message</label></div>
 												<div class="col-6"><label>OSC Input</label></div>
 
-												<div class="col-12 pt-1 border-top"><button type="submit" onclick="return false" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button></div>
+												<div class="col-12 pt-1 border-top"><button type="submit" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button></div>
 											</div>
 										</form>
 									</div>

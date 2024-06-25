@@ -1,3 +1,11 @@
+/*                   ____                      ____              
+ *     ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _ 
+ *    / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | |
+ *   | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| |
+ *    \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, |
+ *                                       |___/      |_|    |___/ 
+ * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
+
 const Util = {
 	TWO_POW_32 : 4294967296,
 	UNIX_EPOCH : 2208988800,
@@ -42,12 +50,6 @@ const STATE = {
 	paused        : false,
 	showAll       : true,
 	showTime      : false,
-}
-
-async function processI18N() {
-	for ( const element of Util.queryA('[data-i18n-string') ) {
-		window.i18n.string(element.textContent).then((value) => { element.textContent = value })
-	}
 }
 
 const knownClass = new Map([
@@ -133,6 +135,8 @@ const updateOSCList = () => {
 	}
 }
 
+
+
 window.osc.receive('osc:tick', (time, since, connectName) => {
 	const timeString  = `${(Math.round(time * 10) / 10).toFixed(1)} m/s`
 	const sinceString = ( since > 10000 ) ? '>10s' : `${(since/1000).toFixed(2)}s`
@@ -165,10 +169,6 @@ window.osc.receive('osc:data', (data) => {
 		return
 	}
 	/* unknown message type */
-})
-
-window.addEventListener('DOMContentLoaded', () => {
-	processI18N()
 })
 
 function clientDoClear() {

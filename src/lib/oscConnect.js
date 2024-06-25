@@ -146,4 +146,17 @@ class oscConnection extends EventEmitter {
 
 }
 
+function getNetworkInterfaces() {
+	const validNetworks = new Set(['0.0.0.0'])
+
+	for ( const iface of Object.values(require('node:os').networkInterfaces()) ) {
+		for ( const address of iface ) {
+			if ( address.family === 'IPv4' ) { validNetworks.add(address.address) }
+		}
+	}
+
+	return [...validNetworks].sort()
+}
+
+module.exports.getNetworkInterfaces = getNetworkInterfaces
 module.exports.oscConnection = oscConnection

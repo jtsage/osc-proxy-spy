@@ -1,22 +1,13 @@
 const { app, BrowserWindow, ipcMain } = require('electron')
 
 const path            = require('node:path')
-const {oscConnection} = require('./lib/oscConnect.js')
+const {oscConnection, getNetworkInterfaces} = require('./lib/oscConnect.js')
 const {appState}      = require('./lib/settings.js')
 
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { app.quit() }
 
-
-
-// const translateString = (_event, text) => {
-// 	if ( appState.lang === 'en-US' ) {
-// 		return `~${text}~`
-// 	}
-// 	// check if key exists in new lang, return english otherwise
-// 	return 'unimplemented'
-// }
 
 const createWindow = () => {
 	appState.win = new BrowserWindow({
@@ -42,6 +33,10 @@ const createWindow = () => {
 
 	// Open the DevTools.
 	if ( appState.debug ) {	appState.win.webContents.openDevTools() }
+
+	appState.win.webContents.on('did-finish-load', () => {
+		appState.win.webContents.send('settings:networks', getNetworkInterfaces())
+	})
 }
 
 // This method will be called when Electron has finished

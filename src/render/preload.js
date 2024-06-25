@@ -30,8 +30,27 @@ contextBridge.exposeInMainWorld(
 
 
 contextBridge.exposeInMainWorld(
+	'settings', {
+		connection : (options) => ipcRenderer.invoke('settings:connection', options),
+		//string : (key) => ipcRenderer.invoke('i18n:string', key),
+		
+		receive   : ( channel, func ) => {
+			const validChannels = new Set([
+				'settings:networks',
+				'settings:connections',
+			])
+		
+			if ( validChannels.has( channel ) ) {
+				ipcRenderer.on( channel, ( _, ...args ) => func( ...args ))
+			}
+		},
+	}
+)
+
+
+contextBridge.exposeInMainWorld(
 	'osc', {
-		copyFavorites   : () => { ipcRenderer.send('toMain_copyFavorites') },
+		//string : (key) => ipcRenderer.invoke('i18n:string', key),
 		
 		receive   : ( channel, func ) => {
 			const validChannels = new Set([
