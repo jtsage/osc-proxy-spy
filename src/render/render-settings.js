@@ -8,9 +8,6 @@
 
 /* global Util */
 
-
-// Object.fromEntries(new FormData(Util.byId('connect-001-form')))
-
 function clientFormSave(e) {
 	e.preventDefault()
 
@@ -30,8 +27,14 @@ function clientFormSave(e) {
 	connectSend.data.active = (connectSend.data?.active === 'on')
 	connectSend.data['shared-socket'] = (connectSend.data?.['shared-socket'] === 'on')
 
-	window.settings.connection(connectSend).then((_result) => {
-		// do something with the result!
+	window.settings.saveConnection(connectSend).then((result) => {
+		const opDiv = result ? 'operation-good' : 'operation-bad'
+		Util.byId(opDiv).classList.remove('d-none')
+		Util.byId(opDiv).classList.replace('hide', 'show')
+		
+		setTimeout(() => { Util.byId(opDiv).classList.replace('show', 'hide')}, 1000)
+		setTimeout(() => { Util.byId(opDiv).classList.add('d-none')}, 1175)
+		// TODO: do something with the result, it's T/F
 	})
 }
 
@@ -56,6 +59,57 @@ function clientFormBlur(e) {
 	}
 }
 
+function doNullString(value) { return value === null ? '' : value }
+
+function populateConnection(number, details) {
+	const prefix = `connect-00${number}`
+	for ( const [key, value] of Object.entries(details) ) {
+		switch ( key ) {
+			case 'name' :
+				Util.byId(`${prefix}-name`).value = doNullString(value)
+				break
+			case 'isActive' :
+				Util.byId(`${prefix}-active`).checked = value
+				break
+			case 'sharedSocket' :
+				Util.byId(`${prefix}-shared-socket`).checked = value
+				break
+			case 'portIn' :
+				Util.byId(`${prefix}-in-port`).value = doNullString(value)
+				break
+			case 'portOut' :
+				Util.byId(`${prefix}-out-port`).value = doNullString(value)
+				break
+			case 'addressIn' :
+				if ( value === null ) { continue }
+				Util.byId(`${prefix}-in-address`).value = value
+				break
+			case 'addressOut' :
+				Util.byId(`${prefix}-out-address`).value = doNullString(value)
+				break
+			case 'proxyInPort' :
+				Util.byId(`${prefix}-proxy-in-port`).value = doNullString(value)
+				break
+			case 'proxyInAddress' :
+				if ( value === null ) { continue }
+				Util.byId(`${prefix}-proxy-in-address`).value = value
+				break
+			case 'heartbeatTime' :
+				Util.byId(`${prefix}-heartbeat-time`).value = doNullString(value)
+				break
+			default:
+				break
+		}
+	}
+	for ( let i = 0; i <= 2; i++ ) {
+		const thisProxyPair = details?.proxyPairs[i]
+		
+		Util.byId(`${prefix}-proxy-00${i+1}-port`).value    = doNullString(thisProxyPair?.port ?? null)
+		Util.byId(`${prefix}-proxy-00${i+1}-address`).value = doNullString(thisProxyPair?.address ?? null)
+	}
+	
+}
+
 window.settings.receive('settings:networks', (networks) => {
 	const netDropHTML  = networks.map((x) => `<option value="${x}">${x}</option>`)
 	for ( const element of Util.queryA('.network-drop') ) {
@@ -70,6 +124,23 @@ async function processI18N() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+	const connectionSettingTemplate = Util.byId('connection-template').innerHTML
+
+	for ( let i = 1; i <= 8; i++ ) {
+		Util.byId(`connect-00${i}`).innerHTML = connectionSettingTemplate.replaceAll('-000-', `-00${i}-`)
+	}
+
+	window.settings.networks().then((networks) => {
+		const netDropHTML  = networks.map((x) => `<option value="${x}">${x}</option>`)
+		for ( const element of Util.queryA('.network-drop') ) {
+			element.innerHTML = netDropHTML
+		}
+	})
+
+	for ( let i = 1; i <= 8; i++ ) {
+		window.settings.getConnection(i).then((details) => populateConnection(i, details))
+	}
+
 	for ( const element of Util.byId('connect-tab-pane').getElementsByTagName('input')) {
 		element.addEventListener('blur', (e) => clientFormBlur(e))
 	}

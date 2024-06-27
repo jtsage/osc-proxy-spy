@@ -1,10 +1,10 @@
-/*  _______           __ _______               __         __   
-   |   |   |.-----.--|  |   _   |.-----.-----.|__|.-----.|  |_ 
-   |       ||  _  |  _  |       ||__ --|__ --||  ||__ --||   _|
-   |__|_|__||_____|_____|___|___||_____|_____||__||_____||____|
-   (c) 2022-present FSG Modding.  MIT License. */
-
-// Main window preLoad
+/*                   ____                      ____              
+ *     ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _ 
+ *    / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | |
+ *   | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| |
+ *    \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, |
+ *                                       |___/      |_|    |___/ 
+ * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
 
 const {contextBridge, ipcRenderer} = require('electron')
 
@@ -31,13 +31,16 @@ contextBridge.exposeInMainWorld(
 
 contextBridge.exposeInMainWorld(
 	'settings', {
-		connection : (options) => ipcRenderer.invoke('settings:connection', options),
+		getConnection  : (number) => ipcRenderer.invoke('settings:read:connection', number),
+		saveConnection : (options) => ipcRenderer.invoke('settings:write:connection', options),
+
+		networks   : () => ipcRenderer.invoke('settings:networks'),
 		//string : (key) => ipcRenderer.invoke('i18n:string', key),
 		
 		receive   : ( channel, func ) => {
 			const validChannels = new Set([
-				'settings:networks',
-				'settings:connections',
+				// 'settings:networks',
+				// 'settings:connectDetail',
 			])
 		
 			if ( validChannels.has( channel ) ) {

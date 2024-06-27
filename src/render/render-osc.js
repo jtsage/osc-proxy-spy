@@ -78,7 +78,7 @@ const oscFormat = (thisArg) => {
 		showValue = thisOne.format(thisArg)
 	} else if ( thisArg.type === 'color' ) {
 		const color = `${thisArg.value[0]}, ${thisArg.value[1]}, ${thisArg.value[2]}, ${thisArg.value[3]/255}`
-		return `<div class="osc-color" style="background-color: rgba(${color})">RGBa</div>`
+		return `<div class="osc-color" title="${color}" style="background-color: rgba(${color})">RGBa</div>`
 	}
 
 	return `<div class="${className}">${showValue}</div>`
@@ -88,9 +88,10 @@ const addOSC = (data) => {
 	if ( STATE.hideEmpty && data.args.length === 0 ) { return }
 	if ( STATE.addressFilter !== '' && data.address.indexOf(STATE.addressFilter) === -1 ) { return }
 
+	const thisName    = data.proxyIn ? `${data.name}-proxy` : data.name
 	const thisDiv     = document.createElement('div')
 	const divContents = [
-		`<div class="osc-name">${data.name}</div>`,
+		`<div class="osc-name">${thisName}</div>`,
 		`<div class="osc-address">${data.address}</div>`,
 	]
 
@@ -111,10 +112,10 @@ const addOSC = (data) => {
 		divContents.unshift(`<div class="osc-timestamp">${Util.dateFormatter(new Date(data.date))}</div>`)
 	}
 	thisDiv.classList.add('data-osc')
-	thisDiv.setAttribute('data-connection', data.name)
+	thisDiv.setAttribute('data-connection', thisName)
 	thisDiv.setAttribute('data-address', data.address)
 	thisDiv.innerHTML = divContents.join('')
-	STATE.oscStack.push([thisDiv, data.name, data.address])
+	STATE.oscStack.push([thisDiv, thisName, data.address])
 	updateOSCList()
 }
 
@@ -163,6 +164,7 @@ window.osc.receive('osc:data', (data) => {
 				bundleDate : data.timetag,
 				date       : data.date,
 				name       : data.name,
+				proxyIn    : data.proxyIn,
 				...element,
 			})
 		}

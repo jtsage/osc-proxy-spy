@@ -1,13 +1,18 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+/*                   ____                      ____              
+ *     ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _ 
+ *    / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | |
+ *   | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| |
+ *    \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, |
+ *                                       |___/      |_|    |___/ 
+ * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
 
-const path            = require('node:path')
+const { app, BrowserWindow, ipcMain }       = require('electron')
+const path                                  = require('node:path')
 const {oscConnection, getNetworkInterfaces} = require('./lib/oscConnect.js')
-const {appState}      = require('./lib/settings.js')
-
+const {appState}                            = require('./lib/settings.js')
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { app.quit() }
-
 
 const createWindow = () => {
 	appState.win = new BrowserWindow({
@@ -34,36 +39,44 @@ const createWindow = () => {
 	// Open the DevTools.
 	if ( appState.debug ) {	appState.win.webContents.openDevTools() }
 
-	appState.win.webContents.on('did-finish-load', () => {
-		appState.win.webContents.send('settings:networks', getNetworkInterfaces())
-	})
+	// appState.win.webContents.on('did-finish-load', () => {
+	// 	appState.win.webContents.send('settings:networks', getNetworkInterfaces())
+	// })
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+const openConnections = () => {
+	for ( let i = 1; i <= 8; i++ ) {
+		if ( appState.oscConnections[i] !== null ) {
+			appState.oscConnections[i].safeClose()
+			appState.oscConnections[i] = null
+		}
+		const thisConnection = appState.settings.getConnection(i)
+		if ( thisConnection.isActive === false ) { continue }
+		appState.oscConnections[i] = new oscConnection(thisConnection)
+
+		appState.oscConnections[i].on('message', (msg) => {
+			appState.win.webContents.send('osc:data', msg)
+		})
+		
+		appState.oscConnections[i].on('frequency', (time, since) => {
+			appState.win.webContents.send('osc:tick', time, since, appState.oscConnections[i].name)
+		})
+		// console.log(thisConnection)
+	}
+}
+
 app.whenReady().then(() => {
-	ipcMain.handle('i18n:string', (e, t) => appState.i18n.eventString(e, t))
+	ipcMain.handle('i18n:string', (e, text) => appState.i18n.eventString(e, text))
+	ipcMain.handle('settings:networks', () => getNetworkInterfaces())
+	ipcMain.handle('settings:write:connection', (_e, connection) => {
+		const saveState = appState.settings.saveConnection(connection)
+		openConnections()
+		return saveState
+	})
+	ipcMain.handle('settings:read:connection', (_e, number) => appState.settings.getConnection(number))
 
 	createWindow()
-
-	const testOSCCon = new oscConnection({
-		name : 'test-connect',
-		portIn : 3333,
-		portOut : 3366,
-		// proxyPairs : [
-		// 	{ port : 4444, address : '127.0.0.1' },
-		// 	{ port : 4400, address : '127.0.0.1' },
-		// ],
-	})
-
-	testOSCCon.on('message', (msg) => {
-		appState.win.webContents.send('osc:data', msg)
-	})
-	
-	testOSCCon.on('frequency', (time, since) => {
-		appState.win.webContents.send('osc:tick', time, since, testOSCCon.name)
-	})
+	openConnections()
 
 	// On OS X it's common to re-create a window in the app when the
 	// dock icon is clicked and there are no other windows open.

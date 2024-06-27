@@ -12,15 +12,26 @@
 	</head>
 	<body data-bs-theme="dark">
 		<div class="container-fluid vh-100">
+			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-good" style="left:30%; top:0px">
+				<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="90%" fill="rgba(35,135,84,0.5)" class="bi bi-hand-thumbs-up-fill" viewBox="0 0 16 16">
+					<path d="M6.956 1.745C7.021.81 7.908.087 8.864.325l.261.066c.463.116.874.456 1.012.965.22.816.533 2.511.062 4.51a10 10 0 0 1 .443-.051c.713-.065 1.669-.072 2.516.21.518.173.994.681 1.2 1.273.184.532.16 1.162-.234 1.733q.086.18.138.363c.077.27.113.567.113.856s-.036.586-.113.856c-.039.135-.09.273-.16.404.169.387.107.819-.003 1.148a3.2 3.2 0 0 1-.488.901c.054.152.076.312.076.465 0 .305-.089.625-.253.912C13.1 15.522 12.437 16 11.5 16H8c-.605 0-1.07-.081-1.466-.218a4.8 4.8 0 0 1-.97-.484l-.048-.03c-.504-.307-.999-.609-2.068-.722C2.682 14.464 2 13.846 2 13V9c0-.85.685-1.432 1.357-1.615.849-.232 1.574-.787 2.132-1.41.56-.627.914-1.28 1.039-1.639.199-.575.356-1.539.428-2.59z"/>
+				</svg>
+			</div>
+			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-bad" style="left:30%; top:0px">
+				<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="90%" fill="rgba(187,33,32,0.5)" class="bi bi-hand-thumbs-down-fill" viewBox="0 0 16 16">
+					<path d="M6.956 14.534c.065.936.952 1.659 1.908 1.42l.261-.065a1.38 1.38 0 0 0 1.012-.965c.22-.816.533-2.512.062-4.51q.205.03.443.051c.713.065 1.669.071 2.516-.211.518-.173.994-.68 1.2-1.272a1.9 1.9 0 0 0-.234-1.734c.058-.118.103-.242.138-.362.077-.27.113-.568.113-.856 0-.29-.036-.586-.113-.857a2 2 0 0 0-.16-.403c.169-.387.107-.82-.003-1.149a3.2 3.2 0 0 0-.488-.9c.054-.153.076-.313.076-.465a1.86 1.86 0 0 0-.253-.912C13.1.757 12.437.28 11.5.28H8c-.605 0-1.07.08-1.466.217a4.8 4.8 0 0 0-.97.485l-.048.029c-.504.308-.999.61-2.068.723C2.682 1.815 2 2.434 2 3.279v4c0 .851.685 1.433 1.357 1.616.849.232 1.574.787 2.132 1.41.56.626.914 1.28 1.039 1.638.199.575.356 1.54.428 2.591"/>
+				</svg>
+			</div>
+
 			<div class="row vh-100 flex-column flex-nowrap">
 				<div class="col-12" style="-webkit-app-region: drag;"><div class="h4">OSC Proxy Spy</div></div>
 
 				<div class="col-12"><ul class="nav nav-tabs nav-fill" id="myTab" role="tablist">
 					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="home-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Main</button>
+						<button class="nav-link active" id="home-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Main</button>
 					</li>
 					<li class="nav-item" role="presentation">
-						<button class="nav-link active" id="connect-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#connect-tab-pane" type="button" role="tab" aria-controls="connect-tab-pane" aria-selected="false">Connections</button>
+						<button class="nav-link" id="connect-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#connect-tab-pane" type="button" role="tab" aria-controls="connect-tab-pane" aria-selected="false">Connections</button>
 					</li>
 					<li class="nav-item" role="presentation">
 						<button class="nav-link" id="settings-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#settings-tab-pane" type="button" role="tab" aria-controls="settings-tab-pane" aria-selected="false">Settings</button>
@@ -33,7 +44,7 @@
 				<div class="col-12 flex-grow-1 flex-shrink-1 overflow-hidden">
 					<div class="tab-content h-100" id="myTabContent">
 						<!-- MAIN PAGE -->
-						<div class="tab-pane h-100 fade" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+						<div class="tab-pane h-100 fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
 							<div class="d-flex h-100 pt-2">
 								<div class="col-3 pt-5">
 									<div class="btn btn-sm btn-success w-100" id="pauseButton" onclick="clientDoPause()">
@@ -99,7 +110,7 @@
 							</div>
 						</div>
 						<!-- CONNECTION PAGE -->
-						<div class="tab-pane h-100 fade show active mt-2" id="connect-tab-pane" role="tabpanel" aria-labelledby="connect-tab" tabindex="0">
+						<div class="tab-pane h-100 fade mt-2" id="connect-tab-pane" role="tabpanel" aria-labelledby="connect-tab" tabindex="0">
 							<div class="d-flex align-items-start h-100 pb-2">
 								<div class="nav flex-column flex-shrink-0 nav-pills me-3 pe-2 border-end border-secondary h-100" id="connect-pills" role="tablist" aria-orientation="vertical">
 									<button class="nav-link active" id="connect-001-tab" data-bs-toggle="pill" data-bs-target="#connect-001" type="button" role="tab" data-i18n-string>Connection #1</button>
@@ -112,83 +123,14 @@
 									<button class="nav-link" id="connect-008-tab" data-bs-toggle="pill" data-bs-target="#connect-008" type="button" role="tab" data-i18n-string>Connection #8</button>
 								</div>
 								<div class="tab-content flex-grow-1 h-100" id="v-pills-tabContent">
-									<div class="tab-pane fade show active h-100" id="connect-001" role="tabpanel" tabindex="0">
-										<form method="post" id="connect-001-form" class="h-100 form-control-sm">
-											<div class="row h-100 align-items-center">
-												<div class="col-3"><label data-i18n-string>Connection Name</label></div>
-												<div class="col-1"><div class="form-check form-switch">
-													<input id="connect-001-active" name="connect-001-active" class="form-check-input" type="checkbox" role="switch">
-												</div></div>
-												<div class="col-8"><input id="connect-001-name" name="connect-001-name" pattern="[A-Za-z0-9\-]+" title="a-z, A-Z, 0-9, '-'" type="text" class="form-control form-control-sm  w-100"></div>
-
-												<div class="col-2"><label data-i18n-string>Listener</label></div>
-												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-in-port" name="connect-001-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><select id="connect-001-in-address" name="connect-001-in-address" class="form-select form-select-sm network-drop"></select></div>
-
-												<div class="col-2"><label data-i18n-string>Sender</label></div>
-												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-out-port" name="connect-001-out-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><input id="connect-001-out-address" name="connect-001-out-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-												<div class="col-11"><label data-i18n-string>Use shared socket (Listener port and Sender port need to be identical)</label></div>
-												<div class="col-1"><div class="form-check form-switch">
-													<input id="connect-001-shared-socket" name="connect-001-shared-socket" class="form-check-input" type="checkbox" role="switch">
-												</div></div>
-
-												<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Output</span><br>
-												<span class="text-muted fst-italic small" data-i18n-string>OSC Messages received on "Listener" will be sent to these hosts/ports</span></div>
-
-												<div class="col-2"><label data-i18n-string>Proxy #1</label></div>
-												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-001-port" name="connect-001-proxy-001-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><input id="connect-001-proxy-001-address" name="connect-001-proxy-001-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-												<div class="col-2"><label data-i18n-string>Proxy #2</label></div>
-												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-002-port" name="connect-001-proxy-002-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><input id="connect-001-proxy-002-address" name="connect-001-proxy-002-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-												<div class="col-2"><label data-i18n-string>Proxy #3</label></div>
-												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-003-port" name="connect-001-proxy-003-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><input id="connect-001-proxy-003-address" name="connect-001-proxy-003-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-												<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Input</span><br>
-												<span class="text-muted fst-italic small" data-i18n-string>Additionally listen on this port, messages received will be sent to "Sender"</span></div>
-
-												<div class="col-2"><label data-i18n-string>Proxy In</label></div>
-												<div class="col-1"><label data-i18n-string>Port</label></div>
-												<div class="col-2"><input id="connect-001-proxy-in-port" name="connect-001-proxy-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-												<div class="col-2"><label data-i18n-string>Address</label></div>
-												<div class="col-5"><select id="connect-001-proxy-in-address" name="connect-001-proxy-in-address" class="form-select form-select-sm network-drop"></select></div>
-
-												<div class="col-12 text-center border-top"><span data-i18n-string>Heartbeat Message</span><br>
-												<span class="text-muted fst-italic small" data-i18n-string>Send this OSC Message every set number of seconds</span></div>
-
-												<div class="col-2"><label data-i18n-string>Time (sec)</label></div>
-												<div class="col-2"><input id="connect-001-heartbeat-time" name="connect-001-heartbeat-time" min="1" max="600" title="1 - 600" type="number" class="form-control-sm form-control w-100"></div>
-												<div class="col-2"><label data-i18n-string>Message</label></div>
-												<div class="col-6"><label>OSC Input</label></div>
-
-												<div class="col-12 pt-1 border-top"><button type="submit" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button></div>
-											</div>
-										</form>
-									</div>
-									<div class="tab-pane fade" id="connect-002" role="tabpanel" tabindex="0">
-
-									</div>
-									<div class="tab-pane h-100 fade" id="connect-003" role="tabpanel" tabindex="0">...</div>
-									<div class="tab-pane h-100 fade" id="connect-004" role="tabpanel" tabindex="0">...</div>
-									<div class="tab-pane h-100 fade" id="connect-005" role="tabpanel" tabindex="0">...</div>
-									<div class="tab-pane h-100 fade" id="connect-006" role="tabpanel" tabindex="0">...</div>
-									<div class="tab-pane h-100 fade" id="connect-007" role="tabpanel" tabindex="0">...</div>
-									<div class="tab-pane h-100 fade" id="connect-008" role="tabpanel" tabindex="0">...</div>
+									<div class="tab-pane fade show active h-100" id="connect-001" role="tabpanel" tabindex="0"></div>
+									<div class="tab-pane h-100 fade" id="connect-002" role="tabpanel" tabindex="0"></div>
+									<div class="tab-pane h-100 fade" id="connect-003" role="tabpanel" tabindex="0"></div>
+									<div class="tab-pane h-100 fade" id="connect-004" role="tabpanel" tabindex="0"></div>
+									<div class="tab-pane h-100 fade" id="connect-005" role="tabpanel" tabindex="0"></div>
+									<div class="tab-pane h-100 fade" id="connect-006" role="tabpanel" tabindex="0"></div>
+									<div class="tab-pane h-100 fade" id="connect-007" role="tabpanel" tabindex="0"></div>
+									<div class="tab-pane h-100 fade" id="connect-008" role="tabpanel" tabindex="0"></div>
 								</div>
 							</div>
 						</div>
@@ -229,5 +171,75 @@
 				</div>
 			</div>
 		</div>
+
+
+		<template id="connection-template">
+			<form method="post" id="connect-000-form" class="h-100 form-control-sm">
+				<div class="row h-100 align-items-center">
+					<div class="col-3"><label data-i18n-string>Connection Name</label></div>
+					<div class="col-1"><div class="form-check form-switch">
+						<input id="connect-000-active" name="connect-000-active" class="form-check-input" type="checkbox" role="switch">
+					</div></div>
+					<div class="col-8"><input id="connect-000-name" name="connect-000-name" pattern="[A-Za-z0-9\-]+" title="a-z, A-Z, 0-9, '-'" type="text" class="form-control form-control-sm  w-100"></div>
+
+					<div class="col-2"><label data-i18n-string>Listener</label></div>
+					<div class="col-1"><label data-i18n-string>Port</label></div>
+					<div class="col-2"><input id="connect-000-in-port" name="connect-000-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+					<div class="col-2"><label data-i18n-string>Address</label></div>
+					<div class="col-5"><select id="connect-000-in-address" name="connect-000-in-address" class="form-select form-select-sm network-drop"></select></div>
+
+					<div class="col-2"><label data-i18n-string>Sender</label></div>
+					<div class="col-1"><label data-i18n-string>Port</label></div>
+					<div class="col-2"><input id="connect-000-out-port" name="connect-000-out-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+					<div class="col-2"><label data-i18n-string>Address</label></div>
+					<div class="col-5"><input id="connect-000-out-address" name="connect-000-out-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
+
+					<div class="col-11"><label data-i18n-string>Use shared socket (Listener port and Sender port need to be identical)</label></div>
+					<div class="col-1"><div class="form-check form-switch">
+						<input id="connect-000-shared-socket" name="connect-000-shared-socket" class="form-check-input" type="checkbox" role="switch">
+					</div></div>
+
+					<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Output</span><br>
+					<span class="text-muted fst-italic small" data-i18n-string>OSC Messages received on "Listener" will be sent to these hosts/ports</span></div>
+
+					<div class="col-2"><label data-i18n-string>Proxy #1</label></div>
+					<div class="col-1"><label data-i18n-string>Port</label></div>
+					<div class="col-2"><input id="connect-000-proxy-001-port" name="connect-000-proxy-001-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+					<div class="col-2"><label data-i18n-string>Address</label></div>
+					<div class="col-5"><input id="connect-000-proxy-001-address" name="connect-000-proxy-001-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
+
+					<div class="col-2"><label data-i18n-string>Proxy #2</label></div>
+					<div class="col-1"><label data-i18n-string>Port</label></div>
+					<div class="col-2"><input id="connect-000-proxy-002-port" name="connect-000-proxy-002-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+					<div class="col-2"><label data-i18n-string>Address</label></div>
+					<div class="col-5"><input id="connect-000-proxy-002-address" name="connect-000-proxy-002-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
+
+					<div class="col-2"><label data-i18n-string>Proxy #3</label></div>
+					<div class="col-1"><label data-i18n-string>Port</label></div>
+					<div class="col-2"><input id="connect-000-proxy-003-port" name="connect-000-proxy-003-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+					<div class="col-2"><label data-i18n-string>Address</label></div>
+					<div class="col-5"><input id="connect-000-proxy-003-address" name="connect-000-proxy-003-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
+
+					<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Input</span><br>
+					<span class="text-muted fst-italic small" data-i18n-string>Additionally listen on this port, messages received will be sent to "Sender"</span></div>
+
+					<div class="col-2"><label data-i18n-string>Proxy In</label></div>
+					<div class="col-1"><label data-i18n-string>Port</label></div>
+					<div class="col-2"><input id="connect-000-proxy-in-port" name="connect-000-proxy-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
+					<div class="col-2"><label data-i18n-string>Address</label></div>
+					<div class="col-5"><select id="connect-000-proxy-in-address" name="connect-000-proxy-in-address" class="form-select form-select-sm network-drop"></select></div>
+
+					<div class="col-12 text-center border-top"><span data-i18n-string>Heartbeat Message</span><br>
+					<span class="text-muted fst-italic small" data-i18n-string>Send this OSC Message every set number of seconds</span></div>
+
+					<div class="col-2"><label data-i18n-string>Time (sec)</label></div>
+					<div class="col-2"><input id="connect-000-heartbeat-time" name="connect-000-heartbeat-time" min="1" max="600" title="1 - 600" type="number" class="form-control-sm form-control w-100"></div>
+					<div class="col-2"><label data-i18n-string>Message</label></div>
+					<div class="col-6"><label>OSC Input</label></div>
+
+					<div class="col-12 pt-1 border-top"><button type="submit" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button></div>
+				</div>
+			</form>
+		</template>
 	</body>
 </html>

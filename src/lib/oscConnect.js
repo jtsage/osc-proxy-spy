@@ -1,3 +1,11 @@
+/*                   ____                      ____              
+ *     ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _ 
+ *    / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | |
+ *   | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| |
+ *    \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, |
+ *                                       |___/      |_|    |___/ 
+ * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
+
 const EventEmitter = require('node:events')
 const dgram        = require('node:dgram')
 const osc          = require('simple-osc-lib')
@@ -11,10 +19,15 @@ class oscConnection extends EventEmitter {
 	proxy      = false
 	proxyPairs = []
 
-	sharedSocket = false
-	proxySocket  = false
-	outSocket    = false
-	inSocket     = false
+	proxyIn         = false
+	proxyInAddress  = null
+	proxyInPort     = null
+
+	sharedSocket  = false
+	proxySocket   = null
+	inProxySocket = null
+	outSocket     = null
+	inSocket      = null
 
 	frequencyInterval = null
 	lastSix           = [0, 0, 0, 0, 0, 0]
@@ -37,17 +50,30 @@ class oscConnection extends EventEmitter {
 		
 		this.sharedSocket = options?.sharedSocket ?? false
 
+		this.proxyInAddress = options?.proxyInAddress ?? null
+		this.proxyInPort    = options?.proxyInPort ?? null
+
+		if ( this.proxyInPort !== null && this.proxyInAddress !== null && this.portOut !== null ) {
+			this.proxyIn = true
+		}
+
 		this.#initConnection()
 	}
 
 
-	#emitOSC(buffer, _rinfo) {
+	safeClose() {
+		if ( this.inProxySocket !== null ) { this.inProxySocket.close() }
+		if ( this.inSocket !== null ) { this.inSocket.close() }
+	}
+
+	#emitOSC(buffer, isInputProxy = false) {
 		if ( typeof buffer === 'undefined' || buffer === null ) {
 			this.emit('message', {
 				address : null,
 				args    : [],
 				date    : (new Date()).toISOString(),
 				name    : this.name,
+				proxyIn : isInputProxy,
 				type    : 'osc-connection-open',
 			} )
 		} else {
@@ -56,8 +82,9 @@ class oscConnection extends EventEmitter {
 				this.lastSix.shift()
 				this.lastSix.push(thisDate.getTime())
 				this.emit('message', {
-					date : thisDate.toISOString(),
-					name : this.name,
+					date    : thisDate.toISOString(),
+					name    : this.name,
+					proxyIn : isInputProxy,
 					...this.oscLib.readPacket(buffer),
 				})
 			} catch (err) {
@@ -92,10 +119,6 @@ class oscConnection extends EventEmitter {
 
 	sendProxy(buffer, port, address) {
 		this.proxySocket.send(buffer, 0, buffer.length, port, address)
-	}
-
-	safeClose() {
-		if ( this.inSocket !== null ) { this.inSocket.close() }
 	}
 
 	#initConnection() {
@@ -142,6 +165,20 @@ class oscConnection extends EventEmitter {
 				}
 			})
 		}
+
+		if ( this.proxyIn ) {
+			this.inProxySocket = dgram.createSocket({type : 'udp4', reuseAddr : true})
+			this.inProxySocket.bind(this.proxyInPort, this.proxyInAddress)
+			this.inProxySocket.on('message', (buffer) => {
+				this.sendOut(buffer)
+				this.#emitOSC(buffer, true)
+			})
+			this.inProxySocket.on('error',   (err) => {
+				this.#emitError(err)
+				this.inSocket.close()
+			})
+			this.inProxySocket.on('listening', () => { this.#emitOSC(null, true) })
+		}
 	}
 
 }
@@ -158,5 +195,7 @@ function getNetworkInterfaces() {
 	return [...validNetworks].sort()
 }
 
-module.exports.getNetworkInterfaces = getNetworkInterfaces
-module.exports.oscConnection = oscConnection
+module.exports = {
+	getNetworkInterfaces : getNetworkInterfaces,
+	oscConnection        : oscConnection,
+}
