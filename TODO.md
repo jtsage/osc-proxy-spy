@@ -1,9 +1,5 @@
-# Connection types
+# TODO Items
 
-Listener Only
-Sender Only
-Bi-Directional Send/Listen (shared socket)
-
-Bi-Directional Send/Listen (not shared socket)
-
-Proxy Listen->Send (multiple outs?)
+settings page
+actual tests
+setting clear option

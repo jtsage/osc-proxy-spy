@@ -6,10 +6,10 @@
  *                                       |___/      |_|    |___/ 
  * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
 
-const { app, BrowserWindow, ipcMain }       = require('electron')
+const { app, BrowserWindow, ipcMain, Menu } = require('electron')
 const path                                  = require('node:path')
 const {oscConnection, getNetworkInterfaces} = require('./lib/oscConnect.js')
-const {appState}                            = require('./lib/settings.js')
+const {appState, getMenu}                   = require('./lib/settings.js')
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { app.quit() }
@@ -18,13 +18,6 @@ const createWindow = () => {
 	appState.win = new BrowserWindow({
 		height : 600,
 		width  : 950,
-
-		titleBarOverlay : {
-			color       : '#212529',
-			symbolColor : '#5E6A75',
-			height      : 25,
-		},
-		titleBarStyle   : 'hidden',
 
 		webPreferences : {
 			contextIsolation : true,
@@ -39,9 +32,6 @@ const createWindow = () => {
 	// Open the DevTools.
 	if ( appState.debug ) {	appState.win.webContents.openDevTools() }
 
-	// appState.win.webContents.on('did-finish-load', () => {
-	// 	appState.win.webContents.send('settings:networks', getNetworkInterfaces())
-	// })
 }
 
 const openConnections = () => {
@@ -55,31 +45,52 @@ const openConnections = () => {
 		appState.oscConnections[i] = new oscConnection(thisConnection)
 
 		appState.oscConnections[i].on('message', (msg) => {
-			appState.win.webContents.send('osc:data', msg)
+			try {
+				appState.win.webContents.send('osc:data', msg)
+			} catch {
+				/* do nothing */
+			}
 		})
 		
-		appState.oscConnections[i].on('frequency', (time, since) => {
-			appState.win.webContents.send('osc:tick', time, since, appState.oscConnections[i].name)
+		appState.oscConnections[i].on('frequency', (time, since, working) => {
+			try {
+				appState.win.webContents.send('osc:tick', time, since, working, appState.oscConnections[i].name)
+			} catch {
+				/* do nothing */
+			}
 		})
-		// console.log(thisConnection)
 	}
 }
+
 
 app.whenReady().then(() => {
 	ipcMain.handle('i18n:string', (e, text) => appState.i18n.eventString(e, text))
 	ipcMain.handle('settings:networks', () => getNetworkInterfaces())
+	ipcMain.handle('settings:reopen:connections', () => { openConnections() })
 	ipcMain.handle('settings:write:connection', (_e, connection) => {
 		const saveState = appState.settings.saveConnection(connection)
 		openConnections()
 		return saveState
 	})
 	ipcMain.handle('settings:read:connection', (_e, number) => appState.settings.getConnection(number))
+	ipcMain.handle('settings:get', (_e, settingName) => appState.settings.get(settingName) )
+	ipcMain.handle('settings:set', (_e, settingName, value) => appState.settings.set(settingName, value))
+	ipcMain.handle('settings:toggle', (_e, settingName, forceValue = null) => appState.settings.toggle(settingName, forceValue))
+	ipcMain.handle('osc:send', (_e, connection, packet) => {
+		try {
+			appState.oscConnections[connection].sendObjectOut(packet)
+			return true
+		} catch {
+			return false
+		}
+	})
 
 	createWindow()
 	openConnections()
 
-	// On OS X it's common to re-create a window in the app when the
-	// dock icon is clicked and there are no other windows open.
+	const menu = Menu.buildFromTemplate(getMenu())
+	Menu.setApplicationMenu(menu)
+
 	app.on('activate', () => {
 		if (BrowserWindow.getAllWindows().length === 0) {
 			createWindow()
@@ -87,9 +98,6 @@ app.whenReady().then(() => {
 	})
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
 	if (process.platform !== 'darwin') { app.quit() }
 })

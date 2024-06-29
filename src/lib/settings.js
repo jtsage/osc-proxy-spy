@@ -6,14 +6,16 @@
  *                                       |___/      |_|    |___/ 
  * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
 
-const path  = require('node:path')
-const fs    = require('node:fs')
-const {app} = require('electron')
+const path          = require('node:path')
+const fs            = require('node:fs')
+const {app, shell } = require('electron')
 
 class Settings {
 	#defaultSettings = {
-		langCode : 'en-US',
-		connections : [null, {}, {}, {}, {}, {}, {}, {}, {}],
+		connections     : [null, {}, {}, {}, {}, {}, {}, {}, {}],
+		langCode        : 'en-US',
+		showDateInfo    : true,
+		showEachMessage : true,
 	}
 
 	#settings = {}
@@ -33,6 +35,8 @@ class Settings {
 				...settingsOnDisk,
 			}
 		}
+
+		this.saveToDisk()
 	}
 
 
@@ -47,6 +51,13 @@ class Settings {
 	set(key, value) {
 		this.#settings[key] = value
 		this.saveToDisk()
+		return this.#settings[key]
+	}
+
+	toggle(key, forceValue = null) {
+		this.#settings[key] = forceValue !== null ? forceValue : !this.#settings[key]
+		this.saveToDisk()
+		return this.#settings[key]
 	}
 
 	loadFromDisk() {
@@ -87,7 +98,9 @@ class Settings {
 				proxyInAddress  : this.#nullishText(details.data['proxy-in-address']),
 				proxyInPort     : this.#nullishInt(details.data['proxy-in-port']),
 
-				heartbeatTime   : this.#nullishInt(details.data['heartbeat-time']),
+				heartbeatAddress : this.#nullishText(details.data['heartbeat-address']),
+				heartbeatArgs    : details.data?.['heartbeat-args'] ?? [],
+				heartbeatTime    : this.#nullishInt(details.data['heartbeat-time']),
 			}
 
 			for ( let i = 1; i <= 3; i++ ) {
@@ -127,6 +140,139 @@ class Translator {
 		// check if key exists in new lang, return english otherwise
 		return 'unimplemented'
 	}
+
+	string(text) { return this.eventString(null, text) }
+}
+
+function getMenu() {
+	const isMac = process.platform === 'darwin'
+	return [
+	// { role: 'appMenu' }
+		...(!isMac ? [] : [{
+			label   : app.name,
+			submenu : [
+				{ role : 'about' },
+				{ type : 'separator' },
+				{ role : 'services' },
+				{ type : 'separator' },
+				{ role : 'hide' },
+				{ role : 'hideOthers' },
+				{ role : 'unhide' },
+				{ type : 'separator' },
+				{ role : 'quit' }
+			],
+		}]),
+		// { role: 'fileMenu' }
+		{
+			label   : appState.i18n.string('File'),
+			submenu : [
+				// {
+				// 	label : appState.i18n.string('Clear all Connections'),
+				// 	click : async () => {
+				// 		for ( let i = 1; i <= 8; i++ ) {
+				// 			appState.settings.saveConnection({number : i, data : {}})
+				// 		}
+				// 		appState.win.webContents.send('settings:refresh')
+				// 	},
+				// },
+				// { type : 'separator' },
+				isMac ? { role : 'close' } : { role : 'quit' }
+			],
+		},
+		// { role: 'editMenu' }
+		{
+			label   : appState.i18n.string('Edit'),
+			submenu : [
+				{ role : 'undo' },
+				{ role : 'redo' },
+				{ type : 'separator' },
+				{ role : 'cut' },
+				{ role : 'copy' },
+				{ role : 'paste' },
+				{ role : 'delete' },
+				{ type : 'separator' },
+				{ role : 'selectAll' },
+			],
+		},
+		// { role: 'viewMenu' }
+		{
+			label : appState.i18n.string('View'),
+			submenu : [
+				{
+					accelerator : 'CmdOrCtrl+1',
+					label : appState.i18n.string('Show Messages'),
+					click : async () => {
+						appState.win.webContents.send('settings:showWindow', 'home')
+					},
+				},
+				{
+					accelerator : 'CmdOrCtrl+2',
+					label : appState.i18n.string('Connections'),
+					click : async () => {
+						appState.win.webContents.send('settings:showWindow', 'connect')
+					},
+				},
+				{
+					accelerator : 'CmdOrCtrl+3',
+					label : appState.i18n.string('Settings'),
+					click : async () => {
+						appState.win.webContents.send('settings:showWindow', 'settings')
+					},
+				},
+				// pages here
+				{ type : 'separator' },
+				{ role : 'reload' },
+				{ role : 'forceReload' },
+				{ type : 'separator' },
+				{ role : 'resetZoom' },
+				{ role : 'zoomIn' },
+				{ role : 'zoomOut' },
+				{ type : 'separator' },
+				{ role : 'togglefullscreen' }
+			],
+		},
+		// { role: 'windowMenu' }
+		{
+			label : appState.i18n.string('Window'),
+			submenu : [
+				{ role : 'minimize' },
+				...(isMac
+					? [
+						{ type : 'separator' },
+						{ role : 'front' },
+						{ type : 'separator' },
+						{ role : 'window' }
+					]
+					: [
+						{ role : 'close' }
+					])
+			],
+		},
+		{
+			role : 'help',
+			submenu : [
+				{ role : 'about', label :  appState.i18n.string('About') },
+				{
+					label : appState.i18n.string('Message Info'),
+					click : async () => {
+						appState.win.webContents.send('settings:showWindow', 'help')
+					},
+				},
+				{
+					label : appState.i18n.string('GitHub'),
+					click : async () => {
+						await shell.openExternal('https://github.com/jtsage/osc-proxy-spy')
+					},
+				},
+				{
+					label : appState.i18n.string('Search Issues'),
+					click : async () => {
+						await shell.openExternal('https://github.com/jtsage/osc-proxy-spy/issues')
+					},
+				},
+			],
+		}
+	]
 }
 
 const settings = new Settings()
@@ -141,4 +287,7 @@ const appState = {
 	win            : null,
 }
 
-module.exports.appState = appState
+module.exports = {
+	appState : appState,
+	getMenu  : getMenu,
+}

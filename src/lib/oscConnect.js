@@ -31,7 +31,13 @@ class oscConnection extends EventEmitter {
 
 	frequencyInterval = null
 	lastSix           = [0, 0, 0, 0, 0, 0]
+	everWorked        = false
 
+	heartbeatAddress  = null
+	heartbeatArgs     = []
+	heartbeatBuffer   = null
+	heartbeatInterval = null
+	heartbeatTime     = null
 
 	oscLib = null
 
@@ -52,6 +58,10 @@ class oscConnection extends EventEmitter {
 
 		this.proxyInAddress = options?.proxyInAddress ?? null
 		this.proxyInPort    = options?.proxyInPort ?? null
+
+		this.heartbeatTime = options?.heartbeatTime ?? null
+		this.heartbeatAddress = options?.heartbeatAddress ?? null
+		this.heartbeatArgs = options?.heartbeatArgs ?? []
 
 		if ( this.proxyInPort !== null && this.proxyInAddress !== null && this.portOut !== null ) {
 			this.proxyIn = true
@@ -78,6 +88,7 @@ class oscConnection extends EventEmitter {
 			} )
 		} else {
 			try {
+				this.everWorked = true
 				const thisDate = new Date()
 				this.lastSix.shift()
 				this.lastSix.push(thisDate.getTime())
@@ -109,12 +120,23 @@ class oscConnection extends EventEmitter {
 		this.emit(
 			'frequency',
 			( avgDivisor === 0 ) ? 0 : 1000 / Math.round(avgDividend / avgDivisor),
-			( this.lastSix[this.lastSix.length - 1] === 0 ) ? 11000 : (new Date()).getTime() - this.lastSix[this.lastSix.length - 1]
+			( this.lastSix[this.lastSix.length - 1] === 0 ) ? 11000 : (new Date()).getTime() - this.lastSix[this.lastSix.length - 1],
+			this.everWorked
 		)
+	}
+
+	sendObjectOut(oscMessage) {
+		this.sendOut(this.oscLib.buildMessage(oscMessage))
 	}
 
 	sendOut(buffer) {
 		this.outSocket.send(buffer, 0, buffer.length, this.portOut, this.addressOut)
+		this.emit('message', {
+			date    : (new Date()).toISOString(),
+			name    : `→ ${this.name}`,
+			proxyIn : false,
+			...this.oscLib.readPacket(buffer),
+		})
 	}
 
 	sendProxy(buffer, port, address) {
@@ -178,6 +200,16 @@ class oscConnection extends EventEmitter {
 				this.inSocket.close()
 			})
 			this.inProxySocket.on('listening', () => { this.#emitOSC(null, true) })
+		}
+
+		if ( this.portOut !== null && this.heartbeatTime !== null && this.heartbeatAddress !== null ) {
+			this.heartbeatBuffer = this.oscLib.buildMessage({
+				address : this.heartbeatAddress,
+				args    : this.heartbeatArgs,
+			})
+			this.heartbeatInterval = setInterval(() => {
+				this.sendOut(this.heartbeatBuffer)
+			}, this.heartbeatTime * 1000)
 		}
 	}
 

@@ -2,13 +2,13 @@
 <html lang="en-US">
 	<head>
 		<meta charset="UTF-8">
-		<title>Hello World!</title>
+		<meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+		<title>OSC Proxy Spy</title>
 		<link rel="stylesheet" href="inc/bootstrap.min.css">
 		<link rel="stylesheet" href="inc/bootstrap-icons.css">
 		<link rel="stylesheet" href="inc/oscspy.css">
 		<script src="inc/bootstrap.bundle.min.js"></script>
 		<script src="render-osc.js"></script>
-		<script src="render-settings.js"></script>
 	</head>
 	<body data-bs-theme="dark">
 		<div class="container-fluid vh-100">
@@ -24,149 +24,166 @@
 			</div>
 
 			<div class="row vh-100 flex-column flex-nowrap">
-				<div class="col-12" style="-webkit-app-region: drag;"><div class="h4">OSC Proxy Spy</div></div>
-
-				<div class="col-12"><ul class="nav nav-tabs nav-fill" id="myTab" role="tablist">
-					<li class="nav-item" role="presentation">
-						<button class="nav-link active" id="home-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Main</button>
-					</li>
-					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="connect-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#connect-tab-pane" type="button" role="tab" aria-controls="connect-tab-pane" aria-selected="false">Connections</button>
-					</li>
-					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="settings-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#settings-tab-pane" type="button" role="tab" aria-controls="settings-tab-pane" aria-selected="false">Settings</button>
-					</li>
-					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="help-tab" data-i18n-string data-bs-toggle="tab" data-bs-target="#help-tab-pane" type="button" role="tab" aria-controls="help-tab-pane" aria-selected="false">Help</button>
-					</li>
-				</ul></div>
-
 				<div class="col-12 flex-grow-1 flex-shrink-1 overflow-hidden">
-					<div class="tab-content h-100" id="myTabContent">
-						<!-- MAIN PAGE -->
-						<div class="tab-pane h-100 fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
-							<div class="d-flex h-100 pt-2">
-								<div class="col-3 pt-5">
-									<div class="btn btn-sm btn-success w-100" id="pauseButton" onclick="clientDoPause()">
-										<span id="pauseButton_go"><i class="bi bi-play-fill float-start"></i> <span data-i18n-string>Pause Display</span></span>
-										<span id="pauseButton_stop" class="d-none"><i class="bi bi-pause-fill float-start"></i> <span data-i18n-string>Resume Display</span></span>
-									</div>
-									<div class="btn btn-sm btn-warning w-100 mt-2" onclick="clientDoClear()">
-										<i class="bi bi-x-octagon float-start"></i> <span data-i18n-string>Clear Display</span>
-									</div>
-									<div class="btn btn-sm btn-info w-100 mt-2" onclick="clientDoSingle()">
-										<span id="singleMode_off"><i class="bi bi-list-ol float-start"></i> <span data-i18n-string>Display Mode : All</span></span>
-										<span id="singleMode_on" class="d-none"><i class="bi bi-list-task float-start"></i> <span data-i18n-string>Display Mode : Changes</span></span>
-									</div>
-									<div class="btn btn-sm btn-info w-100 mt-2" onclick="clientDoDate()">
-										<span id="dateMode_off"><i class="bi bi-bell-slash float-start"></i> <span data-i18n-string>Display Time Data : No</span></span>
-										<span id="dateMode_on" class="d-none"><i class="bi bi-bell float-start"></i> <span data-i18n-string>Display Time Data : Yes</span></span>
-									</div>
-									<div class="mt-3 h5 text-center" data-i18n-string>Filters</div>
-									<div class="input-group mb-3 rounded">
-										<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-string>Connections</button>
-										<div class="dropdown-menu w-100">
+					<!-- MAIN PAGE -->
+					<div class="h-100 d-flex flex-column page-tab-pane" id="home-tab-pane">
+						<div class="d-flex flex-column h-100">
+							<div class="d-flex h-100 gx-3 user-select-none">
+								<div class="col-3 py-2 pe-1 d-flex flex-column justify-content-evenly align-items-center">
+									<div class="w-100">
+										<div class="h5 mb-0 text-center" data-i18n-string>Control</div>
+										<div class="btn btn-sm btn-success w-100 mt-1" id="pauseButton">
+											<span id="pauseButton_go"><i class="bi bi-play-fill float-start"></i> <span data-i18n-string>Pause Display</span></span>
+											<span id="pauseButton_stop" class="d-none"><i class="bi bi-pause-fill float-start"></i> <span data-i18n-string>Resume Display</span></span>
+										</div>
+										<div class="btn btn-sm btn-warning w-100 mt-2" id="clearButton">
+											<i class="bi bi-x-octagon float-start"></i> <span data-i18n-string>Clear Display</span>
 										</div>
 									</div>
-									<div class="input-group mb-3 rounded">
-										<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-string>Exclude Types</button>
-										<div class="dropdown-menu w-100">
-											<div class="form-check form-switch mx-2">
-												<input onchange="clientChangeTypeFilter()" class="form-check-input" type="checkbox" role="switch" value="no arguments" name="selected_assets[]">
-												<label class="form-check-label">no arguments</label>
-											</div>
-											<div class="form-check form-switch mx-2">
-												<input onchange="clientChangeTypeFilter()" class="form-check-input" type="checkbox" role="switch" value="strings" name="selected_assets[]">
-												<label class="form-check-label">strings</label>
-											</div>
-											<div class="form-check form-switch mx-2">
-												<input onchange="clientChangeTypeFilter()" class="form-check-input" type="checkbox" role="switch" value="integers" name="selected_assets[]">
-												<label class="form-check-label">integers</label>
-											</div>
-											<div class="form-check form-switch mx-2">
-												<input onchange="clientChangeTypeFilter()" class="form-check-input" type="checkbox" role="switch" value="floats" name="selected_assets[]">
-												<label class="form-check-label">floats</label>
-											</div>
-											<div class="form-check form-switch mx-2">
-												<input onchange="clientChangeTypeFilter()" class="form-check-input" type="checkbox" role="switch" value="nulls" name="selected_assets[]">
-												<label class="form-check-label">nulls</label>
-											</div>
-											<div class="form-check form-switch mx-2">
-												<input onchange="clientChangeTypeFilter()" class="form-check-input" type="checkbox" role="switch" value="other" name="selected_assets[]">
-												<label class="form-check-label">other</label>
-											</div>
+									<div class="w-100">
+										<div class="h5 mb-0 text-center" data-i18n-string>Data</div>
+										<div class="btn btn-sm btn-primary w-100 mt-1" id="singleButton">
+											<span id="singleMode_off"><i class="bi bi-list-ol float-start"></i> <span data-i18n-string>Display Mode : All</span></span>
+											<span id="singleMode_on" class="d-none"><i class="bi bi-list-task float-start"></i> <span data-i18n-string>Display Mode : Per Address</span></span>
+										</div>
+										<div class="btn btn-sm btn-primary w-100 mt-2" id="dateButton">
+											<span id="dateMode_off"><i class="bi bi-bell-slash float-start"></i> <span data-i18n-string>Display Time Data : No</span></span>
+											<span id="dateMode_on" class="d-none"><i class="bi bi-bell float-start"></i> <span data-i18n-string>Display Time Data : Yes</span></span>
 										</div>
 									</div>
-									<div class="mb-3">
-										<label class="form-label text-center" data-i18n-string>Address Limit</label>
-										<input type="text" class="form-control form-control-sm" onkeyup="clientUpdateFilter()" id="address-limit" placeholder="/example/address">
+									<div class="w-100">
+										<div class="h5 mb-0 text-center" data-i18n-string>Filters</div>
+										<div class="input-group mt-1 rounded">
+											<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-string>Exclude Connection</button>
+											<div class="dropdown-menu w-100" id="connection-view-filter">
+											</div>
+										</div>
+										<div class="input-group mt-2 rounded">
+											<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-string>Exclude Types</button>
+											<div class="dropdown-menu w-100" id="connection-type-filter"></div>
+										</div>
+									</div>
+									<div class="w-100">
+										<div class="h5 mb-0 text-center" data-i18n-string>Address Limit</div>
+										<input type="text" class="w-100 form-control form-control-sm mt-1" id="address-limit" placeholder="/example/address">
 									</div>
 								</div>
-								<div class="col-9 d-flex flex-column">
-									<div class="h5 text-center" data-i18n-string>OSC Data</div>
-									<div class="m-2 p-1 h-100 shadow border border-black" id="osc-data-container"></div>
-									<div class="m-2 p-1 shadow border border-black d-flex flex-wrap flex-row justify-content-evenly" id="osc-connection-container"></div>
+								<div class="ps-2 col-9 d-flex flex-column">
+									<div class="my-2 p-1 h-100 shadow border border-black" id="osc-data-container"></div>
 								</div>
 							</div>
 						</div>
-						<!-- CONNECTION PAGE -->
-						<div class="tab-pane h-100 fade mt-2" id="connect-tab-pane" role="tabpanel" aria-labelledby="connect-tab" tabindex="0">
-							<div class="d-flex align-items-start h-100 pb-2">
-								<div class="nav flex-column flex-shrink-0 nav-pills me-3 pe-2 border-end border-secondary h-100" id="connect-pills" role="tablist" aria-orientation="vertical">
-									<button class="nav-link active" id="connect-001-tab" data-bs-toggle="pill" data-bs-target="#connect-001" type="button" role="tab" data-i18n-string>Connection #1</button>
-									<button class="nav-link" id="connect-002-tab" data-bs-toggle="pill" data-bs-target="#connect-002" type="button" role="tab" data-i18n-string>Connection #2</button>
-									<button class="nav-link" id="connect-003-tab" data-bs-toggle="pill" data-bs-target="#connect-003" type="button" role="tab" data-i18n-string>Connection #3</button>
-									<button class="nav-link" id="connect-004-tab" data-bs-toggle="pill" data-bs-target="#connect-004" type="button" role="tab" data-i18n-string>Connection #4</button>
-									<button class="nav-link" id="connect-005-tab" data-bs-toggle="pill" data-bs-target="#connect-005" type="button" role="tab" data-i18n-string>Connection #5</button>
-									<button class="nav-link" id="connect-006-tab" data-bs-toggle="pill" data-bs-target="#connect-006" type="button" role="tab" data-i18n-string>Connection #6</button>
-									<button class="nav-link" id="connect-007-tab" data-bs-toggle="pill" data-bs-target="#connect-007" type="button" role="tab" data-i18n-string>Connection #7</button>
-									<button class="nav-link" id="connect-008-tab" data-bs-toggle="pill" data-bs-target="#connect-008" type="button" role="tab" data-i18n-string>Connection #8</button>
+						<div class="border-top" id="osc-connection-info">
+							<div id="osc-send-div" class="mt-2 d-flex flex-row">
+								<select class="form-select form-select-sm border-black rounded-0 rounded-start w-auto bg-body-tertiary send-input" id="send-destination">
+									<option value="0" selected>n/a</option>
+								</select>
+								<input type="text" class="form-control form-control-sm w-25 rounded-0 border-black send-input" placeholder="/address" id="send-address">
+								<div class="p-1 shadow border-top border-bottom border-black rounded-0 flex-grow-1 d-flex flex-wrap flex-row justify-content-start osc-send-container">
+									<div id="osc-add-args" class="d-flex flex-wrap flex-row justify-content-start"></div>
+									<div class="osc-add" id="send-button-add"><i class="bi bi-plus-circle"></i></div>
 								</div>
-								<div class="tab-content flex-grow-1 h-100" id="v-pills-tabContent">
-									<div class="tab-pane fade show active h-100" id="connect-001" role="tabpanel" tabindex="0"></div>
-									<div class="tab-pane h-100 fade" id="connect-002" role="tabpanel" tabindex="0"></div>
-									<div class="tab-pane h-100 fade" id="connect-003" role="tabpanel" tabindex="0"></div>
-									<div class="tab-pane h-100 fade" id="connect-004" role="tabpanel" tabindex="0"></div>
-									<div class="tab-pane h-100 fade" id="connect-005" role="tabpanel" tabindex="0"></div>
-									<div class="tab-pane h-100 fade" id="connect-006" role="tabpanel" tabindex="0"></div>
-									<div class="tab-pane h-100 fade" id="connect-007" role="tabpanel" tabindex="0"></div>
-									<div class="tab-pane h-100 fade" id="connect-008" role="tabpanel" tabindex="0"></div>
-								</div>
+								<button type="button" id="send-button-clear" class="btn btn-sm btn-danger rounded-0 disabled" aria-label="Clear Input"><i class="bi bi-trash3-fill"></i></button>
+								<button type="button" id="send-button-send" class="btn btn-sm btn-success rounded-0 rounded-end disabled" aria-label="Send Message"><i class="bi bi-send-check-fill"></i></button>
+							</div>
+							<div id="osc-status" class="my-2 d-flex flex-row">
+								<div class="user-select-none p-1 shadow border border-black rounded-start" data-i18n-string>Connection Status</div>
+								<div class="user-select-none p-1 shadow border border-black rounded-end d-flex flex-wrap flex-row justify-content-evenly flex-grow-1" id="osc-connection-container"></div>
 							</div>
 						</div>
-						<!-- SETTINGS PAGE -->
-						<div class="tab-pane fade" id="settings-tab-pane" role="tabpanel" aria-labelledby="settings-tab" tabindex="0">
-							SETTINGS
-						</div>
-						<!-- HELP PAGE -->
-						<div class="tab-pane fade" id="help-tab-pane" role="tabpanel" aria-labelledby="help-tab" tabindex="0">
-							<div class="row mt-3">
-								<div class="col-12 mb-3 text-center" data-i18n-string>OSC Supports in a near unlimited amount of data types.  OSCProxySpy understands the following:</div>
-								<div class="col-6">
-									<div class="h5 text-center" data-i18n-string>OSC Standard Data Types</div>
-									<ul class="list-group text-end">
-										<li class="list-group-item"><div class="osc-address float-start">address</div> <span data-i18n-string>The address for the message</span></li>
-										<li class="list-group-item"><div class="osc-string float-start">string</div> <span data-i18n-string>Character string data</span></li>
-										<li class="list-group-item"><div class="osc-integer float-start">integer</div> <span data-i18n-string>32-bit signed Integer</span></li>
-										<li class="list-group-item"><div class="osc-float float-start">float</div> <span data-i18n-string>32-bit signed floating point number</span></li>
-										<li class="list-group-item"><div class="osc-blob float-start">blob</div> <span data-i18n-string>Binary buffer data</span></li>
-										<li class="list-group-item"><div class="osc-timetag float-start">time tag</div> <span data-i18n-string>Date type with extended precision</span></li>
-									</ul>
-								</div>
-								<div class="col-6">
-									<div class="h5 text-center" data-i18n-string>OSC Extended Data Types</div>
-									<ul class="list-group text-end">
-										<li class="list-group-item"><div class="osc-char float-start">char</div> <span data-i18n-string>Single ASCII character (code point 0-127 only)</span></li>
-										<li class="list-group-item"><div class="osc-integer64 float-start">integer</div> <span data-i18n-string>64-bit signed Integer</span></li>
-										<li class="list-group-item"><div class="osc-float64 float-start">float</div> <span data-i18n-string>64-bit signed floating point number</span></li>
-										<li class="list-group-item"><div class="osc-null float-start">T/F/N/I</div> <span data-i18n-string>True, False, Null or Infinity (Bang) types</span></li>
-										<li class="list-group-item"><div class="osc-color float-start" style="background-color: rgba(129, 16, 54, 1)">color</div> <span data-i18n-string>32-bit RGBa Value (shown in color value)</span></li>
-									</ul>
-								</div>
-								<div class="col-12 mt-3 text-center"><div class="osc-bundle-stamp-good">b</div> <div class="osc-bundle-stamp-bad">b</div> <span data-i18n-string>precedes messages that were received as part of a bundle.  The color indicates if the time tag was valid or not.</span></div>
-								<div class="col-12 mt-3 text-center"><strong data-i18n-string>NOTE:</strong><span data-i18n-string>OSC Proxy Spy is a live data viewer - all filtering options take effect on new data as it is received. Data received prior to setting a filter will not be altered.  Likewise, data that does not satisfy the filter is not kept to be reprocessed when the filter settings change.</span></div>
+					</div>
+					<!-- CONNECTION PAGE -->
+					<div class="d-none h-100 mt-2 page-tab-pane" id="connect-tab-pane">
+						<div class="d-flex align-items-start h-100 pb-2">
+							<div class="nav flex-column flex-shrink-0 nav-pills me-3 pe-2 border-end border-secondary h-100" id="connect-pills" role="tablist" aria-orientation="vertical">
+								<button class="nav-link active" id="connect-001-tab" data-bs-toggle="pill" data-bs-target="#connect-001" type="button" role="tab" data-i18n-string>Connection #1</button>
+								<button class="nav-link" id="connect-002-tab" data-bs-toggle="pill" data-bs-target="#connect-002" type="button" role="tab" data-i18n-string>Connection #2</button>
+								<button class="nav-link" id="connect-003-tab" data-bs-toggle="pill" data-bs-target="#connect-003" type="button" role="tab" data-i18n-string>Connection #3</button>
+								<button class="nav-link" id="connect-004-tab" data-bs-toggle="pill" data-bs-target="#connect-004" type="button" role="tab" data-i18n-string>Connection #4</button>
+								<button class="nav-link" id="connect-005-tab" data-bs-toggle="pill" data-bs-target="#connect-005" type="button" role="tab" data-i18n-string>Connection #5</button>
+								<button class="nav-link" id="connect-006-tab" data-bs-toggle="pill" data-bs-target="#connect-006" type="button" role="tab" data-i18n-string>Connection #6</button>
+								<button class="nav-link" id="connect-007-tab" data-bs-toggle="pill" data-bs-target="#connect-007" type="button" role="tab" data-i18n-string>Connection #7</button>
+								<button class="nav-link" id="connect-008-tab" data-bs-toggle="pill" data-bs-target="#connect-008" type="button" role="tab" data-i18n-string>Connection #8</button>
+							</div>
+							<div class="tab-content flex-grow-1 h-100" id="v-pills-tabContent">
+								<div class="tab-pane fade show active h-100" id="connect-001" role="tabpanel" tabindex="0"></div>
+								<div class="tab-pane h-100 fade" id="connect-002" role="tabpanel" tabindex="0"></div>
+								<div class="tab-pane h-100 fade" id="connect-003" role="tabpanel" tabindex="0"></div>
+								<div class="tab-pane h-100 fade" id="connect-004" role="tabpanel" tabindex="0"></div>
+								<div class="tab-pane h-100 fade" id="connect-005" role="tabpanel" tabindex="0"></div>
+								<div class="tab-pane h-100 fade" id="connect-006" role="tabpanel" tabindex="0"></div>
+								<div class="tab-pane h-100 fade" id="connect-007" role="tabpanel" tabindex="0"></div>
+								<div class="tab-pane h-100 fade" id="connect-008" role="tabpanel" tabindex="0"></div>
 							</div>
 						</div>
+					</div>
+					<!-- SETTINGS PAGE -->
+					<div class="d-none h-100 mt-2 page-tab-pane" id="settings-tab-pane">
+						SETTINGS
+					</div>
+					<!-- HELP PAGE -->
+					<div class="d-none h-100 mt-2 page-tab-pane" id="help-tab-pane">
+						<div class="row mt-3">
+							<div class="col-12 mb-3 text-center" data-i18n-string>OSC Supports in a near unlimited amount of data types.  OSCProxySpy understands the following:</div>
+							<div class="col-6">
+								<div class="h5 text-center" data-i18n-string>OSC Standard Data Types</div>
+								<ul class="list-group text-end">
+									<li class="list-group-item"><div class="osc-address float-start">address</div> <span data-i18n-string>The address for the message</span></li>
+									<li class="list-group-item"><div class="osc-string float-start">string</div> <span data-i18n-string>Character string data</span></li>
+									<li class="list-group-item"><div class="osc-integer float-start">integer</div> <span data-i18n-string>32-bit signed Integer</span></li>
+									<li class="list-group-item"><div class="osc-float float-start">float</div> <span data-i18n-string>32-bit signed floating point number</span></li>
+									<li class="list-group-item"><div class="osc-blob float-start">blob</div> <span data-i18n-string>Binary buffer data</span></li>
+									<li class="list-group-item"><div class="osc-timetag float-start">time tag</div> <span data-i18n-string>Date type with extended precision</span></li>
+								</ul>
+							</div>
+							<div class="col-6">
+								<div class="h5 text-center" data-i18n-string>OSC Extended Data Types</div>
+								<ul class="list-group text-end">
+									<li class="list-group-item"><div class="osc-char float-start">char</div> <span data-i18n-string>Single ASCII character (code point 0-127 only)</span></li>
+									<li class="list-group-item"><div class="osc-integer64 float-start">integer</div> <span data-i18n-string>64-bit signed Integer</span></li>
+									<li class="list-group-item"><div class="osc-float64 float-start">float</div> <span data-i18n-string>64-bit signed floating point number</span></li>
+									<li class="list-group-item"><div class="osc-null float-start">T/F/N/I</div> <span data-i18n-string>True, False, Null or Infinity (Bang) types</span></li>
+									<li class="list-group-item"><div class="osc-color float-start" style="background-color: rgba(129, 16, 54, 1)">color</div> <span data-i18n-string>32-bit RGBa Value (shown in color value)</span></li>
+								</ul>
+							</div>
+							<div class="col-12 mt-3 text-center"><div class="osc-bundle-stamp-good">b</div> <div class="osc-bundle-stamp-bad">b</div> <span data-i18n-string>precedes messages that were received as part of a bundle.  The color indicates if the time tag was valid or not.</span></div>
+							<div class="col-12 mt-3 text-center"><strong data-i18n-string>NOTE:</strong><span data-i18n-string>OSC Proxy Spy is a live data viewer - all filtering options take effect on new data as it is received. Data received prior to setting a filter will not be altered.  Likewise, data that does not satisfy the filter is not kept to be reprocessed when the filter settings change.</span></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="modal fade" id="send-add-modal" tabindex="-1">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h1 class="modal-title fs-5" data-i18n-string>Add OSC Argument</h1>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<div class="row gy-2">
+							<div class="col-3" data-i18n-string>Data Type</div>
+							<div class="col-9">
+								<select class="form-select form-select-sm" id="arg-add-type">
+									<option value="0" selected> -- </option>
+									<option value="string">String</option>
+									<option value="integer">Int32</option>
+									<option value="float">Float32</option>
+									<option value="bigint">Int64</option>
+									<option value="double">Float64</option>
+								</select>
+							</div>
+							<div class="col-3" data-i18n-string>Value</div>
+							<div class="col-9">
+								<input type="text" id="arg-add-value" class="form-control form-control-sm w-100">
+							</div>
+						</div>
+						<input type="hidden" id="arg-add-destination" value="0">
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n-string>Cancel</button>
+						<button id="arg-add-process" type="button" class="btn btn-primary" data-i18n-string>Add</button>
 					</div>
 				</div>
 			</div>
@@ -235,7 +252,13 @@
 					<div class="col-2"><label data-i18n-string>Time (sec)</label></div>
 					<div class="col-2"><input id="connect-000-heartbeat-time" name="connect-000-heartbeat-time" min="1" max="600" title="1 - 600" type="number" class="form-control-sm form-control w-100"></div>
 					<div class="col-2"><label data-i18n-string>Message</label></div>
-					<div class="col-6"><label>OSC Input</label></div>
+					<div class="col-6 d-flex">
+						<input type="text" class="form-control form-control-sm w-50 rounded-0 rounded-start  send-input" placeholder="/address" id="connect-000-heartbeat-address" name="connect-000-heartbeat-address">
+						<div class="p-1 shadow border border-start-0 rounded-0 rounded-end flex-grow-1 d-flex flex-wrap flex-row justify-content-start osc-send-container">
+							<div id="connect-000-args" class="d-flex flex-wrap flex-row justify-content-start"></div>
+							<div class="osc-add" id="connect-000-button-add"><i class="bi bi-plus-circle"></i></div>
+						</div>
+					</div>
 
 					<div class="col-12 pt-1 border-top"><button type="submit" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button></div>
 				</div>

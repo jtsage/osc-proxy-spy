@@ -31,16 +31,20 @@ contextBridge.exposeInMainWorld(
 
 contextBridge.exposeInMainWorld(
 	'settings', {
-		getConnection  : (number) => ipcRenderer.invoke('settings:read:connection', number),
-		saveConnection : (options) => ipcRenderer.invoke('settings:write:connection', options),
+		getConnection     : (number)  => ipcRenderer.invoke('settings:read:connection', number),
+		reopenConnections : ()        => ipcRenderer.invoke('settings:reopen:connections'),
+		setConnection     : (options) => ipcRenderer.invoke('settings:write:connection', options),
+
+		get    : (settingName)                    => ipcRenderer.invoke('settings:get', settingName),
+		set    : (settingName, value)             => ipcRenderer.invoke('settings:set', settingName, value),
+		toggle : (settingName, forceValue = null) => ipcRenderer.invoke('settings:toggle', settingName, forceValue),
 
 		networks   : () => ipcRenderer.invoke('settings:networks'),
-		//string : (key) => ipcRenderer.invoke('i18n:string', key),
 		
 		receive   : ( channel, func ) => {
 			const validChannels = new Set([
-				// 'settings:networks',
-				// 'settings:connectDetail',
+				'settings:showWindow',
+				'settings:refresh',
 			])
 		
 			if ( validChannels.has( channel ) ) {
@@ -53,6 +57,7 @@ contextBridge.exposeInMainWorld(
 
 contextBridge.exposeInMainWorld(
 	'osc', {
+		send : (connection, packet) => ipcRenderer.invoke('osc:send', connection, packet),
 		//string : (key) => ipcRenderer.invoke('i18n:string', key),
 		
 		receive   : ( channel, func ) => {
