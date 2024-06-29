@@ -9,6 +9,7 @@
 const path          = require('node:path')
 const fs            = require('node:fs')
 const {app, shell } = require('electron')
+const EventEmitter  = require('node:events')
 
 class Settings {
 	#defaultSettings = {
@@ -66,7 +67,12 @@ class Settings {
 	}
 
 	saveToDisk() {
-		fs.writeFileSync(this.#path, JSON.stringify(this.#settings, null, 4))
+		try {
+			fs.writeFileSync(this.#path, JSON.stringify(this.#settings, null, 4))
+			appState.log.addGood('Saved Settings.')
+		} catch (err) {
+			appState.log.addError(`Saved Settings Failed :: ${err}`)
+		}
 	}
 
 	get #path() {
@@ -79,6 +85,11 @@ class Settings {
 
 	getConnection(number) {
 		return this.#settings.connections[number]
+	}
+
+	inactivateConnection(number) {
+		this.#settings.connections[number].isActive = false
+		this.saveToDisk()
 	}
 
 	saveConnection(details) {
@@ -114,31 +125,120 @@ class Settings {
 
 			this.#settings.connections[details.number] = thisConnection
 			this.saveToDisk()
-		} catch {
+		} catch (err) {
+			appState.log.addError(`Connection #${details.number} :: Save Failed : ${err.message}`)
 			return false
 		}
+		appState.log.addGood(`Connection #${details.number} :: SAVED`)
 		return true
 	}
 }
 
-class Translator {
-	#appSet = null
+class Logger extends EventEmitter {
+	#logItems = []
 
-	constructor(settings) {
-		this.#appSet = settings
+	constructor() {
+		super()
+		this.#clear()
+	}
+
+	add(thisStatus, text, date = null) {
+		const thisDate = (date === null ? new Date() : date).toISOString()
+		
+		this.#logItems.push([
+			thisStatus,
+			thisDate,
+			text
+		])
+		this.#write(thisStatus, thisDate, text)
+		this.emit('new', thisStatus, thisDate, text)
+	}
+	addGood(text, date = null) { this.add(true, text, date) }
+	addError(text, date = null) { this.add(false, text, date) }
+
+	getAll() {
+		return this.#logItems
+	}
+
+	#clear() {
+		fs.writeFileSync(this.#path, '')
+	}
+	
+	#write(thisStatus, thisDate, text) {
+		try {
+			const logLine = `${thisDate} | ${thisStatus ? 'OK    :: ' : 'ERROR :: '}${text}\n`
+			fs.appendFileSync(this.#path, logLine)
+		} catch (err) {
+			this.emit('new', false, thisDate, `LOG FILE ERROR :: ${err.message}`)
+		}
+	}
+
+	get #path() {
+		return path.join(app.getPath('userData'), 'log.txt')
+	}
+}
+
+class Translator {
+	#langSets          = {}
+	#translationMemory = new Set()
+
+	constructor() {
 		this.loadFromDisk()
 	}
 
+	get langKeyList() {
+		const returnObject = [
+			['en-US', 'English (US)'],
+		]
+		for ( const langCode of Object.keys(this.#langSets) ) {
+			returnObject.push([
+				langCode,
+				this.#langSets[langCode].languageName
+			])
+		}
+		return returnObject
+	}
+
+	get #getPath() {
+		return app.isPackaged ?
+			path.join(process.resourcesPath, 'app.asar', 'translations') :
+			path.join(app.getAppPath(), 'translations')
+	}
+
 	loadFromDisk() {
+		const fileList = fs.readdirSync(this.#getPath)
+
+		for ( const thisFile of fileList ) {
+			if ( ! thisFile.endsWith('.json') ) { continue }
+			const thisKey = thisFile.replace('.json', '')
+			try {
+				this.#langSets[thisKey] = JSON.parse(fs.readFileSync(path.join(this.#getPath, thisFile)))
+				appState.log.addGood(`Added Language ${thisFile} :: ${this.#langSets[thisKey].languageName}`)
+			} catch (err) {
+				appState.log.addError(`Bad Language File "${thisFile}" :: ${err.message}`)
+			}
+		}
 		return
 	}
 
-	eventString(_event, text) {
-		if ( this.#appSet.get('langCode') === 'en-US' ) {
-			return `~${text}~`
+	saveToDisk() {
+		const outputObject = {
+			languageName : 'English',
 		}
-		// check if key exists in new lang, return english otherwise
-		return 'unimplemented'
+		for ( const thisItem of [...this.#translationMemory].sort() ) {
+			outputObject[thisItem] = thisItem
+		}
+		fs.writeFileSync(path.join(__dirname, '..', '..', 'translations', 'build', 'translator-output.json'), JSON.stringify(outputObject, null, 4))
+	}
+
+	eventString(_event, text) {
+		if ( appState.debug ) { this.#translationMemory.add(text) }
+		if ( appState.settings.get('langCode') === 'en-US' ) {
+			return text
+		}
+		
+		const thisEntry = this.#langSets?.[appState.settings.get('langCode')]?.[text] ?? null
+		return typeof thisEntry !== 'undefined' && thisEntry !== null ? thisEntry : text
 	}
 
 	string(text) { return this.eventString(null, text) }
@@ -166,16 +266,6 @@ function getMenu() {
 		{
 			label   : appState.i18n.string('File'),
 			submenu : [
-				// {
-				// 	label : appState.i18n.string('Clear all Connections'),
-				// 	click : async () => {
-				// 		for ( let i = 1; i <= 8; i++ ) {
-				// 			appState.settings.saveConnection({number : i, data : {}})
-				// 		}
-				// 		appState.win.webContents.send('settings:refresh')
-				// 	},
-				// },
-				// { type : 'separator' },
 				isMac ? { role : 'close' } : { role : 'quit' }
 			],
 		},
@@ -214,15 +304,16 @@ function getMenu() {
 				},
 				{
 					accelerator : 'CmdOrCtrl+3',
-					label : appState.i18n.string('Settings'),
+					label : appState.i18n.string('Settings & Log'),
 					click : async () => {
 						appState.win.webContents.send('settings:showWindow', 'settings')
 					},
 				},
-				// pages here
-				{ type : 'separator' },
-				{ role : 'reload' },
-				{ role : 'forceReload' },
+				...(appState.debug ? [
+					{ type : 'separator' },
+					{ role : 'reload' },
+					{ role : 'forceReload' },
+				]:[]),
 				{ type : 'separator' },
 				{ role : 'resetZoom' },
 				{ role : 'zoomIn' },
@@ -275,17 +366,20 @@ function getMenu() {
 	]
 }
 
-const settings = new Settings()
-const translate = new Translator(settings)
 
 const appState = {
-	debug          : true,
-	i18n           : translate,
+	debug          : !app.isPackaged,
+	i18n           : null,
+	log            : null,
 	oscConnections : [null, null, null, null, null, null, null, null, null],
 	RENDER         : path.join(__dirname, '..', 'render'),
-	settings       : settings,
+	settings       : null,
 	win            : null,
 }
+
+appState.log      = new Logger()
+appState.settings = new Settings()
+appState.i18n     = new Translator()
 
 module.exports = {
 	appState : appState,

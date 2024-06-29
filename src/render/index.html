@@ -7,17 +7,24 @@
 		<link rel="stylesheet" href="inc/bootstrap.min.css">
 		<link rel="stylesheet" href="inc/bootstrap-icons.css">
 		<link rel="stylesheet" href="inc/oscspy.css">
+		<!--                 ____                      ____               -->
+		<!--   ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _  -->
+		<!--  / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | | -->
+		<!-- | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| | -->
+		<!--  \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, | -->
+		<!--                                     |___/      |_|    |___/  -->
+		<!-- (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy>    -->
 		<script src="inc/bootstrap.bundle.min.js"></script>
 		<script src="render-osc.js"></script>
 	</head>
 	<body data-bs-theme="dark">
 		<div class="container-fluid vh-100">
-			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-good" style="left:30%; top:0px">
+			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-good" style="left:30%; top:0px; z-index:2000;">
 				<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="90%" fill="rgba(35,135,84,0.5)" class="bi bi-hand-thumbs-up-fill" viewBox="0 0 16 16">
 					<path d="M6.956 1.745C7.021.81 7.908.087 8.864.325l.261.066c.463.116.874.456 1.012.965.22.816.533 2.511.062 4.51a10 10 0 0 1 .443-.051c.713-.065 1.669-.072 2.516.21.518.173.994.681 1.2 1.273.184.532.16 1.162-.234 1.733q.086.18.138.363c.077.27.113.567.113.856s-.036.586-.113.856c-.039.135-.09.273-.16.404.169.387.107.819-.003 1.148a3.2 3.2 0 0 1-.488.901c.054.152.076.312.076.465 0 .305-.089.625-.253.912C13.1 15.522 12.437 16 11.5 16H8c-.605 0-1.07-.081-1.466-.218a4.8 4.8 0 0 1-.97-.484l-.048-.03c-.504-.307-.999-.609-2.068-.722C2.682 14.464 2 13.846 2 13V9c0-.85.685-1.432 1.357-1.615.849-.232 1.574-.787 2.132-1.41.56-.627.914-1.28 1.039-1.639.199-.575.356-1.539.428-2.59z"/>
 				</svg>
 			</div>
-			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-bad" style="left:30%; top:0px">
+			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-bad" style="left:30%; top:0px; z-index:2000;">
 				<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="90%" fill="rgba(187,33,32,0.5)" class="bi bi-hand-thumbs-down-fill" viewBox="0 0 16 16">
 					<path d="M6.956 14.534c.065.936.952 1.659 1.908 1.42l.261-.065a1.38 1.38 0 0 0 1.012-.965c.22-.816.533-2.512.062-4.51q.205.03.443.051c.713.065 1.669.071 2.516-.211.518-.173.994-.68 1.2-1.272a1.9 1.9 0 0 0-.234-1.734c.058-.118.103-.242.138-.362.077-.27.113-.568.113-.856 0-.29-.036-.586-.113-.857a2 2 0 0 0-.16-.403c.169-.387.107-.82-.003-1.149a3.2 3.2 0 0 0-.488-.9c.054-.153.076-.313.076-.465a1.86 1.86 0 0 0-.253-.912C13.1.757 12.437.28 11.5.28H8c-.605 0-1.07.08-1.466.217a4.8 4.8 0 0 0-.97.485l-.048.029c-.504.308-.999.61-2.068.723C2.682 1.815 2 2.434 2 3.279v4c0 .851.685 1.433 1.357 1.616.849.232 1.574.787 2.132 1.41.56.626.914 1.28 1.039 1.638.199.575.356 1.54.428 2.591"/>
 				</svg>
@@ -87,7 +94,7 @@
 								<button type="button" id="send-button-send" class="btn btn-sm btn-success rounded-0 rounded-end disabled" aria-label="Send Message"><i class="bi bi-send-check-fill"></i></button>
 							</div>
 							<div id="osc-status" class="my-2 d-flex flex-row">
-								<div class="user-select-none p-1 shadow border border-black rounded-start" data-i18n-string>Connection Status</div>
+								<div class="user-select-none p-1 shadow border border-black rounded-start small" data-i18n-string>Connection Status</div>
 								<div class="user-select-none p-1 shadow border border-black rounded-end d-flex flex-wrap flex-row justify-content-evenly flex-grow-1" id="osc-connection-container"></div>
 							</div>
 						</div>
@@ -119,7 +126,29 @@
 					</div>
 					<!-- SETTINGS PAGE -->
 					<div class="d-none h-100 mt-2 page-tab-pane" id="settings-tab-pane">
-						SETTINGS
+						<div class="d-flex flex-column pb-3 h-100">
+							<div class="d-flex h-100 gx-3 user-select-none">
+								<div class="col-3 py-2 pe-1 d-flex flex-column justify-content-evenly align-items-center">
+									<div class="w-100">
+										<div class="h5 mb-0 text-center" data-i18n-string>Language</div>
+										<select class="form-select form-select-sm w-100 mt-1" id="langPicker">
+											<option value="en-US">English</option>
+										</select>
+										<!-- <div class="btn btn-sm btn-primary w-100 mt-1" id="singleButton">
+											<span id="singleMode_off"><i class="bi bi-list-ol float-start"></i> <span data-i18n-string>Display Mode : All</span></span>
+											<span id="singleMode_on" class="d-none"><i class="bi bi-list-task float-start"></i> <span data-i18n-string>Display Mode : Per Address</span></span>
+										</div> -->
+									</div>
+									<div class="w-100 d-none" id="debug-options">
+										<div class="h5 mb-0 text-center" data-i18n-string>Development</div>
+										<div class="btn btn-sm btn-primary w-100 mt-1" id="debugDumpTranslations" data-i18n-string>Save Translation Memory</div>
+									</div>
+								</div>
+								<div class="ps-2 col-9 d-flex flex-column">
+									<div class="my-2 p-1 h-100 shadow border border-black" id="log-data-container"></div>
+								</div>
+							</div>
+						</div>
 					</div>
 					<!-- HELP PAGE -->
 					<div class="d-none h-100 mt-2 page-tab-pane" id="help-tab-pane">
@@ -154,6 +183,7 @@
 			</div>
 		</div>
 
+		<!-- OSC Argument Modal -->
 		<div class="modal fade" id="send-add-modal" tabindex="-1">
 			<div class="modal-dialog modal-dialog-centered">
 				<div class="modal-content">
@@ -189,7 +219,7 @@
 			</div>
 		</div>
 
-
+		<!-- Connection Setting Template -->
 		<template id="connection-template">
 			<form method="post" id="connect-000-form" class="h-100 form-control-sm">
 				<div class="row h-100 align-items-center">
@@ -260,7 +290,12 @@
 						</div>
 					</div>
 
-					<div class="col-12 pt-1 border-top"><button type="submit" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button></div>
+					<div class="col-12 pt-1 border-top">
+						<div class="btn-group btn-group-sm w-100">
+							<button type="submit" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button>
+							<button type="button" id="connect-000-clear" class="btn-sm w-25 mx-auto d-block btn btn-danger"><span data-i18n-string>Delete Connection</span></button>
+						</div>
+					</div>
 				</div>
 			</form>
 		</template>

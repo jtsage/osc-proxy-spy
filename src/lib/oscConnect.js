@@ -66,14 +66,22 @@ class oscConnection extends EventEmitter {
 		if ( this.proxyInPort !== null && this.proxyInAddress !== null && this.portOut !== null ) {
 			this.proxyIn = true
 		}
-
-		this.#initConnection()
 	}
 
 
 	safeClose() {
-		if ( this.inProxySocket !== null ) { this.inProxySocket.close() }
-		if ( this.inSocket !== null ) { this.inSocket.close() }
+		if ( this.frequencyInterval !== null ) {
+			clearInterval(this.frequencyInterval)
+			this.frequencyInterval = null
+		}
+		if ( this.heartbeatInterval !== null ) {
+			clearInterval(this.heartbeatInterval)
+			this.heartbeatInterval = null
+		}
+		if ( this.inProxySocket !== null ) { this.inProxySocket.close(); this.inProxySocket = null }
+		if ( this.inSocket !== null ) { this.inSocket.close(); this.inSocket = null }
+		this.outSocket   = null
+		this.proxySocket = null
 	}
 
 	#emitOSC(buffer, isInputProxy = false) {
@@ -84,6 +92,7 @@ class oscConnection extends EventEmitter {
 				date    : (new Date()).toISOString(),
 				name    : this.name,
 				proxyIn : isInputProxy,
+				sendOut : false,
 				type    : 'osc-connection-open',
 			} )
 		} else {
@@ -96,6 +105,7 @@ class oscConnection extends EventEmitter {
 					date    : thisDate.toISOString(),
 					name    : this.name,
 					proxyIn : isInputProxy,
+					sendOut : false,
 					...this.oscLib.readPacket(buffer),
 				})
 			} catch (err) {
@@ -105,7 +115,7 @@ class oscConnection extends EventEmitter {
 	}
 
 	#emitError(err) {
-		this.emit('error', err)
+		this.emit('error', err.message)
 	}
 
 	#getReceiveFrequency() {
@@ -133,8 +143,9 @@ class oscConnection extends EventEmitter {
 		this.outSocket.send(buffer, 0, buffer.length, this.portOut, this.addressOut)
 		this.emit('message', {
 			date    : (new Date()).toISOString(),
-			name    : `→ ${this.name}`,
+			name    : this.name,
 			proxyIn : false,
+			sendOut : true,
 			...this.oscLib.readPacket(buffer),
 		})
 	}
@@ -143,7 +154,7 @@ class oscConnection extends EventEmitter {
 		this.proxySocket.send(buffer, 0, buffer.length, port, address)
 	}
 
-	#initConnection() {
+	init() {
 		if ( this.portIn === null && this.portOut === null ) {
 			throw new SyntaxError('connection does nothing')
 		}
@@ -168,7 +179,7 @@ class oscConnection extends EventEmitter {
 
 			this.inSocket.bind(this.portIn, this.addressIn !== null ? this.addressIn : '0.0.0.0')
 
-			setInterval(() => { this.#getReceiveFrequency() }, 1000)
+			this.frequencyInterval = setInterval(() => { this.#getReceiveFrequency() }, 1000)
 		}
 
 		if ( this.portOut !== null ) {

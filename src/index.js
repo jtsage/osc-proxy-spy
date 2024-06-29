@@ -29,67 +29,128 @@ const createWindow = () => {
 	// and load the index.html of the app.
 	appState.win.loadFile(path.join(appState.RENDER, 'index.html'))
 
+	appState.win.webContents.on('did-finish-load', () => {
+		for ( const oldLogItem of appState.log.getAll() ) {
+			appState.win.webContents.send('osc:log', ...oldLogItem)
+		}
+		openConnections()
+	})
+
 	// Open the DevTools.
 	if ( appState.debug ) {	appState.win.webContents.openDevTools() }
 
 }
 
-const openConnections = () => {
-	for ( let i = 1; i <= 8; i++ ) {
-		if ( appState.oscConnections[i] !== null ) {
+const openConnection = (i) => {
+	if ( appState.oscConnections[i] !== null ) {
+		appState.log.addGood(`Connection #${i} :: CLOSING`)
+		try {
+			appState.oscConnections[i].removeAllListeners()
 			appState.oscConnections[i].safeClose()
-			appState.oscConnections[i] = null
+		} catch (err) {
+			appState.log.addError(`Connection #${i} :: ${err.message}`)
 		}
-		const thisConnection = appState.settings.getConnection(i)
-		if ( thisConnection.isActive === false ) { continue }
+		appState.oscConnections[i] = null
+	}
+	const thisConnection = appState.settings.getConnection(i)
+
+	if ( thisConnection.isActive === false ) {
+		appState.log.addGood(`Connection #${i} :: SKIPPING INACTIVE`)
+		return true
+	}
+
+	appState.log.addGood(`Connection #${i} :: OPENING`)
+
+	try {
 		appState.oscConnections[i] = new oscConnection(thisConnection)
 
 		appState.oscConnections[i].on('message', (msg) => {
 			try {
 				appState.win.webContents.send('osc:data', msg)
-			} catch {
-				/* do nothing */
+			} catch (err) {
+				appState.log.addError(`Connection #${i} :: ${err.message}`)
 			}
 		})
 		
 		appState.oscConnections[i].on('frequency', (time, since, working) => {
 			try {
 				appState.win.webContents.send('osc:tick', time, since, working, appState.oscConnections[i].name)
-			} catch {
-				/* do nothing */
+			} catch (err) {
+				appState.log.addError(`Connection #${i} :: ${err.message}`)
 			}
 		})
+
+		appState.oscConnections[i].on('error', (message) => {
+			appState.log.addError(`Connection #${i} :: ${message}`)
+		})
+		appState.oscConnections[i].on('log', (message) => {
+			appState.log.addGood(`Connection #${i} :: ${message}`)
+		})
+
+		appState.oscConnections[i].init()
+
+	} catch (err) {
+		appState.settings.inactivateConnection(i)
+		appState.log.addError(`Connection #${i} :: ${err.message}`)
+		return false
+	}
+	return true
+}
+
+const openConnections = () => {
+	let thisStatus = true
+	for ( let i = 1; i <= 8; i++ ) {
+		if ( ! openConnection(i) ) {
+			thisStatus = false
+		}
+	}
+	return thisStatus
+}
+
+const saveConnection = (_e, details) => {
+	const saveState = appState.settings.saveConnection(details)
+	return saveState && openConnection(details.number)
+}
+
+const sendOSCMessage = (_e, connection, packet) => {
+	try {
+		appState.oscConnections[connection].sendObjectOut(packet)
+		return true
+	} catch (err) {
+		appState.log.addError(`CONNECTION #${connection} :: Send Failed : ${err.message}`)
+		return false
 	}
 }
 
+const updateMenu = () => {
+	const menu = Menu.buildFromTemplate(getMenu())
+	Menu.setApplicationMenu(menu)
+}
 
 app.whenReady().then(() => {
 	ipcMain.handle('i18n:string', (e, text) => appState.i18n.eventString(e, text))
-	ipcMain.handle('settings:networks', () => getNetworkInterfaces())
-	ipcMain.handle('settings:reopen:connections', () => { openConnections() })
-	ipcMain.handle('settings:write:connection', (_e, connection) => {
-		const saveState = appState.settings.saveConnection(connection)
-		openConnections()
-		return saveState
-	})
+	ipcMain.handle('i18n:getLangList', () => ({ active : appState.settings.get('langCode'), list   : appState.i18n.langKeyList }))
+	ipcMain.handle('i18n:set', (_e, value) => { appState.settings.set('langCode', value); updateMenu() })
+
+	ipcMain.handle('settings:networks', getNetworkInterfaces)
+	ipcMain.handle('settings:reopen:connections', openConnections )
+	ipcMain.handle('settings:write:connection', saveConnection)
 	ipcMain.handle('settings:read:connection', (_e, number) => appState.settings.getConnection(number))
+
 	ipcMain.handle('settings:get', (_e, settingName) => appState.settings.get(settingName) )
+	ipcMain.handle('settings:isDebug', () => appState.debug )
 	ipcMain.handle('settings:set', (_e, settingName, value) => appState.settings.set(settingName, value))
 	ipcMain.handle('settings:toggle', (_e, settingName, forceValue = null) => appState.settings.toggle(settingName, forceValue))
-	ipcMain.handle('osc:send', (_e, connection, packet) => {
-		try {
-			appState.oscConnections[connection].sendObjectOut(packet)
-			return true
-		} catch {
-			return false
-		}
-	})
+	ipcMain.handle('settings:dumpTranslationMemory', () => { if ( appState.debug ) { appState.i18n.saveToDisk() } })
+
+	ipcMain.handle('osc:send', sendOSCMessage)
 
 	createWindow()
-	openConnections()
+	updateMenu()
 
-	const menu = Menu.buildFromTemplate(getMenu())
-	Menu.setApplicationMenu(menu)
+	appState.log.on('new', (thisStatus, date, text) => {
+		appState.win.webContents.send('osc:log', thisStatus, date, text)
+	})
 
 	app.on('activate', () => {
 		if (BrowserWindow.getAllWindows().length === 0) {

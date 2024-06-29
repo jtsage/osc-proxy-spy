@@ -92,6 +92,20 @@ const Util = {
 
 	doNullString : (value) => value === null ? '' : value,
 
+	isTextFloat   : (text) => text.match(/^[\d.]+$/),
+	isTextInteger : (text) => text.match(/^\d+$/),
+
+	doUserFeedback : (thisStatus, clearOnGood = true, time = 1000) => {
+		const opDiv = thisStatus ? 'operation-good' : 'operation-bad'
+		Util.byId(opDiv).classList.remove('d-none')
+		Util.byId(opDiv).classList.replace('hide', 'show')
+		
+		setTimeout(() => { Util.byId(opDiv).classList.replace('show', 'hide')}, time)
+		setTimeout(() => {
+			Util.byId(opDiv).classList.add('d-none')
+			if ( thisStatus && clearOnGood ) { doClear() }
+		}, time + 175 )
+	},
 }
 
 const STATE = {
@@ -139,8 +153,10 @@ function clientFormSave(e) {
 
 	if ( ! thisForm.checkValidity() ) { thisForm.reportValidity(); return }
 
+	const thisConNumber = parseInt(thisForm.id.slice(8, 11))
+
 	const connectSend = {
-		number : parseInt(thisForm.id.slice(8, 11)),
+		number : thisConNumber,
 		data   : {},
 	}
 
@@ -152,14 +168,28 @@ function clientFormSave(e) {
 	connectSend.data['shared-socket'] = (connectSend.data?.['shared-socket'] === 'on')
 	connectSend.data['heartbeat-args'] = STATE.sendConnect[connectSend.number]
 
-	
 	window.settings.setConnection(connectSend).then((result) => {
-		const opDiv = result ? 'operation-good' : 'operation-bad'
-		Util.byId(opDiv).classList.remove('d-none')
-		Util.byId(opDiv).classList.replace('hide', 'show')
-		
-		setTimeout(() => { Util.byId(opDiv).classList.replace('show', 'hide')}, 1000)
-		setTimeout(() => { Util.byId(opDiv).classList.add('d-none')}, 1175)
+		Util.doUserFeedback(result)
+	}).catch(() => {
+		Util.doUserFeedback(false)
+	}).finally(() => {
+		window.settings.getConnection(thisConNumber).then((details) => { populateConnection(thisConNumber, details) })
+		buildViewFilters()
+	})
+}
+
+function clientFormClear(thisConNumber) {
+	const connectSend = {
+		number : thisConNumber,
+		data   : {},
+	}
+
+	window.settings.setConnection(connectSend).then((result) => {
+		Util.doUserFeedback(result)
+	}).catch(() => {
+		Util.doUserFeedback(false)
+	}).finally(() => {
+		window.settings.getConnection(thisConNumber).then((details) => { populateConnection(thisConNumber, details) })
 	})
 }
 
@@ -239,9 +269,31 @@ function populateConnection(number, details) {
 }
 
 async function processI18N() {
+	window.i18n.get().then((code) => document.documentElement.setAttribute('lang', code))
+
 	for ( const element of Util.queryA('[data-i18n-string') ) {
-		window.i18n.string(element.textContent).then((value) => { element.textContent = value })
+		const i18nAttribute     = element.getAttribute('data-i18n-string')
+		const stringToTranslate = i18nAttribute !== '' ? i18nAttribute : element.textContent
+
+		if ( i18nAttribute === '' ) {
+			element.setAttribute('data-i18n-string', stringToTranslate)
+		}
+
+		window.i18n.string(stringToTranslate).then((value) => {
+			element.textContent = value
+		})
 	}
+}
+
+function addLog(thisStatus, date, text) {
+	const thisDiv = document.createElement('div')
+	thisDiv.classList.add('data-osc')
+	thisDiv.innerHTML = [
+		Util.oscPartHTML('timestamp', Util.dateFormatter(new Date(date))),
+		Util.oscPartHTML(thisStatus ? 'string' : 'unknown', text)
+	].join('')
+
+	Util.byId('log-data-container').appendChild(thisDiv)
 }
 
 function addOSC(data) {
@@ -250,34 +302,39 @@ function addOSC(data) {
 	if ( STATE.hideCons.has(data.name) ) { return }
 
 	const thisName    = data.proxyIn ? `${data.name}-proxy` : data.name
+	const intName     = data.sendOut === true ? `${thisName}_directIN` : thisName
+	const thisNameCLR = data.sendOut === true ? 'name-send' : STATE.showAll || Util.queryOSC(data.address, thisName) === null ? 'name' : 'name-refresh'
 	const thisDiv     = document.createElement('div')
 	const divContents = [
-		Util.oscPartHTML('name', thisName),
+		Util.oscPartHTML(thisNameCLR, thisName),
 		Util.oscPartHTML('address', data.address)
 	]
+
+	if ( typeof data.bundleDate !== 'undefined' ) {
+		const timeDiff = new Date(data.bundleDate) - new Date(data.date)
+		const partName = `bundle-stamp-${timeDiff < 0 ? 'bad' : 'good'}`
+		if ( !STATE.showTime ) {
+			divContents.splice(1, 0, Util.oscPartHTML(partName, 'b'))
+		} else {
+			divContents.splice(1, 0, Util.oscPartHTML(partName, `b ${timeDiff < 0 ? '':'+'}${timeDiff}ms`))
+		}
+	}
+	if ( data.sendOut ) {
+		divContents.splice(1, 0, Util.oscPartHTML('sent', '<i class="bi bi-box-arrow-in-right"></i>'))
+	}
+	if ( STATE.showTime ) {
+		divContents.unshift(Util.oscPartHTML('timestamp', Util.dateFormatter(new Date(data.date))))
+	}
 
 	for ( const argItem of data.args ) {
 		if ( STATE.hideTypes.has(argItem.type) ) { return }
 		divContents.push(Util.oscArgHTML(argItem))
 	}
-	
-	if ( typeof data.bundleDate !== 'undefined' ) {
-		const timeDiff = new Date(data.bundleDate) - new Date(data.date)
-		const partName = `bundle-stamp-${timeDiff < 0 ? 'bad' : 'good'}`
-		if ( !STATE.showTime ) {
-			divContents.unshift(Util.oscPartHTML(partName, 'b'))
-		} else {
-			divContents.unshift(Util.oscPartHTML(partName, `b ${timeDiff < 0 ? '':'+'}${timeDiff}ms`))
-		}
-	}
-	if ( STATE.showTime ) {
-		divContents.unshift(Util.oscPartHTML('timestamp', Util.dateFormatter(new Date(data.date))))
-	}
 	thisDiv.classList.add('data-osc')
-	thisDiv.setAttribute('data-connection', thisName)
+	thisDiv.setAttribute('data-connection', intName)
 	thisDiv.setAttribute('data-address', data.address)
 	thisDiv.innerHTML = divContents.join('')
-	STATE.oscStack.push([thisDiv, thisName, data.address])
+	STATE.oscStack.push([thisDiv, intName, data.address])
 	updateOSCList()
 }
 
@@ -435,6 +492,7 @@ async function buildConnectionForms() {
 	for ( let i = 1; i <= 8; i++ ) {
 		Util.byId(`connect-00${i}`).innerHTML = connectionSettingTemplate.replaceAll('-000-', `-00${i}-`)
 		Util.byId(`connect-00${i}-button-add`).addEventListener('click', () => { doArgOpenModal(i) })
+		Util.byId(`connect-00${i}-clear`).addEventListener('click', () => { clientFormClear(i) })
 		for ( const selectElement of Util.queryA(`#connect-00${i} .network-drop`) ) {
 			selectElement.innerHTML = networkDropHTML
 		}
@@ -491,21 +549,27 @@ function doArgProcess() {
 		type  : Util.byId('arg-add-type').value,
 		value : Util.byId('arg-add-value').value,
 	}
+	let goodValue = Util.byId('arg-add-value').value.length !== 0
 
 	switch (thisArg.type) {
 		case 'integer' :
+			goodValue = Util.isTextInteger(thisArg.value)
 			thisArg.value = parseInt(thisArg.value)
 			break
 		case 'bigint':
+			goodValue = Util.isTextInteger(thisArg.value)
 			thisArg.value = BigInt(thisArg.value)
 			break
 		case 'float':
 		case 'double':
+			goodValue = Util.isTextFloat(thisArg.value)
 			thisArg.value = parseFloat(thisArg.value)
 			break
 		default:
 			break
 	}
+
+	if ( !goodValue ) { Util.doUserFeedback(false, false, 500); return }
 
 	if ( thisDestination === 0 ) {
 		STATE.sendMain.push(thisArg)
@@ -548,21 +612,27 @@ function doAddSend() {
 		args    : STATE.sendMain,
 	}
 	window.osc.send(connectionNum, messageObj).then((result) => {
-		const opDiv = result ? 'operation-good' : 'operation-bad'
-		Util.byId(opDiv).classList.remove('d-none')
-		Util.byId(opDiv).classList.replace('hide', 'show')
-		
-		setTimeout(() => { Util.byId(opDiv).classList.replace('show', 'hide')}, 500)
-		setTimeout(() => { Util.byId(opDiv).classList.add('d-none')}, 675)
+		Util.doUserFeedback(result, false, 500)
+	}).catch(() => {
+		Util.doUserFeedback(false, false, 500)
+	})
+}
+
+function populateSettings() {
+	window.i18n.list().then((results) => {
+		Util.byId('langPicker').innerHTML = results.list.map((item) => `<option value="${item[0]}" ${item[0] === results.active ? 'selected' : ''}>${item[1]}</option>`).join('')
 	})
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+	/* Filters and flow control */
 	Util.byId('pauseButton').addEventListener('click', doPause)
 	Util.byId('clearButton').addEventListener('click', doClear)
 	Util.byId('singleButton').addEventListener('click', doSingle)
 	Util.byId('dateButton').addEventListener('click', doDate)
 	Util.byId('address-limit').addEventListener('keyup', (e) => { STATE.addressFilter = e.target.value })
+
+	/* OSC Sending */
 	Util.byId('send-address').addEventListener('keyup', doAddUserType)
 	Util.byId('send-button-clear').addEventListener('click', doAddClear)
 	Util.byId('send-button-send').addEventListener('click', doAddSend)
@@ -570,6 +640,15 @@ window.addEventListener('DOMContentLoaded', () => {
 	Util.byId('arg-add-type').addEventListener('change', doArgInputChange)
 	Util.byId('arg-add-value').addEventListener('keyup', doArgInputChange)
 	Util.byId('send-button-add').addEventListener('click', () => { doArgOpenModal(0) })
+
+	/* Settings page buttons */
+	Util.byId('debugDumpTranslations').addEventListener('click', () => { window.i18n.dumpMemory() })
+	Util.byId('langPicker').addEventListener('change', () => {
+		window.i18n.set(Util.byId('langPicker').value).then(() => {
+			populateSettings()
+			processI18N()
+		})
+	})
 
 	buildTypeFilters()
 	buildViewFilters()
@@ -591,6 +670,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
 	window.settings.get('showDateInfo').then((value) => { updateDate(value) })
 	window.settings.get('showEachMessage').then((value) => { updateSingle(value) })
+	
+	populateSettings()
+
+	window.settings.isDebug().then((result) => {
+		if ( !result ) { return }
+		Util.byId('debug-options').classList.remove('d-none')
+	})
 
 	const argumentModalElement = Util.byId('send-add-modal')
 	argumentModal = new bootstrap.Modal(argumentModalElement)
@@ -598,13 +684,6 @@ window.addEventListener('DOMContentLoaded', () => {
 	argumentModalElement.addEventListener('hidden.bs.modal', doArgCloseModal)
 
 	processI18N()
-})
-
-window.settings.receive('settings:refresh', () => {
-	window.settings.reopenConnections()
-	buildViewFilters()
-	buildConnectionForms()
-	doClear()
 })
 
 window.settings.receive('settings:showWindow', (winName) => {
@@ -657,3 +736,5 @@ window.osc.receive('osc:data', (data) => {
 		return
 	}
 })
+
+window.osc.receive('osc:log', (thisStatus, date, text) => { addLog(thisStatus, date, text) })
