@@ -24,14 +24,6 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 	margin-bottom : 4px;
 }
 
-/*                   ____                      ____              
- *     ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _ 
- *    / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | |
- *   | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| |
- *    \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, |
- *                                       |___/      |_|    |___/ 
- * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
-
 #osc-data-container, #log-data-container {
 	overflow-x : auto;
 	overflow-y : auto;
@@ -43,6 +35,10 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 	margin-bottom : 4px;
 }
 
+.message-args {
+	display: inline-flex !important;
+}
+
 .osc-address {
 	background-color : RGBA(var(--bs-primary-rgb), var(--bs-bg-opacity, 1)) !important;
 	border-radius    : 0.175rem !important;
@@ -52,22 +48,22 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 	margin-right     : 6px !important;
 }
 
-.osc-integer, .osc-integer64 {
+.osc-arg-integer, .osc-arg-integer64 {
 	background-color : RGBA(var(--bs-info-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #000 !important;
 }
 
-.osc-float, .osc-float64 {
+.osc-arg-float, .osc-arg-float64 {
 	background-color : RGBA(var(--bs-warning-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #000 !important;
 }
 
-.osc-string, .osc-char {
+.osc-arg-string, .osc-arg-char {
 	background-color : RGBA(var(--bs-success-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #fff !important;
 }
 
-.osc-integer64, .osc-float64, .osc-char {
+.osc-arg-integer64, .osc-arg-float64, .osc-arg-char {
 	font-style : italic !important;
 }
 
@@ -78,6 +74,7 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 
 .osc-timestamp {
 	border-radius : 0 !important;
+	font-family: monospace;
 }
 
 .osc-bundle-stamp-good, .osc-bundle-stamp-bad {
@@ -93,17 +90,17 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 	background-color : var(--bs-form-invalid-color) !important;
 }
 
-.osc-null {
+.osc-arg-null {
 	background-color : RGBA(var(--bs-light-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #333 !important;
 }
 
-.osc-blob {
+.osc-arg-blob {
 	background-color : var(--bs-gray-700) !important;
 	color            : #000 !important;
-}
+}ß
 
-.osc-unknown {
+.osc-arg-unknown {
 	background-color : RGBA(var(--bs-danger-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #fff !important;
 }

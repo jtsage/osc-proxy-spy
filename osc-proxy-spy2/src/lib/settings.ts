@@ -33,7 +33,7 @@ const SettingsDefault : SettingsDef = {
 
 
 export class Settings extends EventEmitter {
-	#connections       ! : Connect.Connection[]
+	#connections         : Connect.Connection[] = []
 	#excludeConnection ! : string[]
 	#excludeType       ! : OSCArgObject['type'][]
 	#intervalFreq        : ReturnType<typeof setInterval> | null = null
@@ -55,7 +55,7 @@ export class Settings extends EventEmitter {
 	set modeAll( v : boolean )                    { this.#modeAll = v; this.saveToDisk() }
 	set modeTime( v : boolean )                   { this.#modeTime = v; this.saveToDisk() }
 
-	constructor( v : Partial<SettingsDef>, l : MainLogger ) {
+	constructor( l : MainLogger ) {
 		super()
 
 		this.#log = l
@@ -77,6 +77,7 @@ export class Settings extends EventEmitter {
 			if ( con.connectionPrime.isListener() ) {
 				results.push( {
 					average : con.connectionPrime.frequency,
+					ever    : con.connectionPrime.sinceEver,
 					name    : con.name,
 					since   : con.connectionPrime.sinceLast,
 				} )

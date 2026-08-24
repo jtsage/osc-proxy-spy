@@ -43,7 +43,10 @@ export class MainLogger {
 		return this.#stack.filter( ( item ) => item[0] >= since )
 	}
 
-	get all() { return this.#stack }
+	get all() {
+		this.#last = new Date()
+		return this.#stack
+	}
 
 	debug( v : unknown ) { this.#add( v, 'DEBUG', null ) }
 	error( v : unknown ) { this.#add( v, 'ERROR', null ) }

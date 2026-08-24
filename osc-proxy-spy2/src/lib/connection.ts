@@ -41,6 +41,7 @@ export type UDPListenEvent = {
 
 export type UDPListenFreqEvent = {
 	average : number,
+	ever    : boolean,
 	name    : string
 	since   : number,
 }
@@ -181,7 +182,9 @@ export class UDPListener {
 		this.#socket = dgram.createSocket( { type : 'udp4', reuseAddr : true } )
 
 		this.#socket.on( 'message', ( buffer ) => {
-			this.#lastSix.shift()
+			if ( this.#lastSix.length > 20 ) {
+				this.#lastSix.shift()
+			}
 			this.#lastSix.push( ( new Date() ).getTime() )
 			this.callback( buffer )
 		} )
@@ -205,11 +208,12 @@ export class UDPListener {
 		}
 	}
 
+	get sinceEver() { return this.#lastSix.length !== 0 }
 	get sinceLast() {
 		if ( this.#lastSix.length === 0 ) {
 			return Infinity
 		}
-		return ( new Date() ).getTime() - this.#lastSix[0]
+		return ( new Date() ).getTime() - this.#lastSix[this.#lastSix.length - 1]
 	}
 
 	get frequency() {
@@ -217,7 +221,7 @@ export class UDPListener {
 			return 0
 		}
 		const lenMinOne = this.#lastSix.length - 1
-		return ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / lenMinOne
+		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
 	}
 
 	isSender()   : this is UDPSender   { return false }
@@ -352,7 +356,7 @@ export class Connection extends EventEmitter {
 		if ( v.connectionPrime.type === 'sender' ) {
 			this.connectionPrime = new UDPSender( v.connectionPrime, this.#log )
 		} else {
-			this.connectionPrime = new UDPListener( this.enabled, v.connectionPrime, this.#log, this.oscInputCallback )
+			this.connectionPrime = new UDPListener( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
 		}
 
 		if ( Array.isArray( v.forwarders ) && v.forwarders.length !== 0 ) {
@@ -371,6 +375,8 @@ export class Connection extends EventEmitter {
 					this.#log.warn( 'Unknown forwarder error' )
 				}
 			}
+		} else {
+			this.forwarders = []
 		}
 
 		try {

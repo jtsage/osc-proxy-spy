@@ -3,6 +3,7 @@ import path from 'node:path'
 import started from 'electron-squirrel-startup'
 import * as packJSON from '../package.json' with { type : 'json' }
 import { MainLogger } from './lib/logger'
+import { Settings } from './lib/settings'
 
 const debug = !app.isPackaged && true
 
@@ -11,8 +12,8 @@ if ( started ) {
 	app.quit()
 }
 
-const log = new MainLogger()
-
+const log      = new MainLogger()
+const settings = new Settings( log )
 
 let mainWindow : BrowserWindow
 
@@ -46,13 +47,16 @@ const createWindow = () => {
 app.on( 'ready', () => {
 	createWindow()
 
-	ipcMain.handle( 'log:new', () => { return log.all } )
-	ipcMain.handle( 'log:update', () => { return log.last } )
+	ipcMain.handle( 'log:all', () => log.all )
+	ipcMain.handle( 'log:new', () => log.last )
+
+	ipcMain.handle( 'settings:get', () => settings.save() )
+
+	settings.on( 'message',   ( v ) => { mainWindow.webContents.send( 'osc:data', v ) } )
+	settings.on( 'frequency', ( v ) => { mainWindow.webContents.send( 'osc:tick', v ) } )
 } )
 
-// app.on( 'before-quit', () => {
-// 	autoSaveConfig()
-// } )
+app.on( 'before-quit', () => { settings.saveToDisk() } )
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
@@ -127,8 +131,13 @@ const mainMenu : Electron.MenuItemConstructorOptions[] = [
 			},
 			{
 				accelerator : 'CmdOrCtrl+3',
-				click       : () => { safeSend( 'view', 'settings' ) },
-				label       : 'Settings',
+				click       : () => { safeSend( 'view', 'log' ) },
+				label       : 'Log',
+			},
+			{
+				accelerator : 'CmdOrCtrl+4',
+				click       : () => { safeSend( 'view', 'help' ) },
+				label       : 'Help',
 			},
 			{ type : 'separator' },
 			{ role : 'resetZoom' },
