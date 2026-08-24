@@ -149,7 +149,9 @@ app.whenReady().then(() => {
 	updateMenu()
 
 	appState.log.on('new', (thisStatus, date, text) => {
-		appState.win.webContents.send('osc:log', thisStatus, date, text)
+		if ( ! appState.win.isDestroyed() ) {
+			appState.win.webContents.send('osc:log', thisStatus, date, text)
+		}
 	})
 
 	app.on('activate', () => {
