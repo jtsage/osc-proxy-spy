@@ -6,11 +6,8 @@
  *                                       |___/      |_|    |___/ 
  * (c) JTSage <https://github.com/jtsage/osc-proxy-spy> */
 
-import { OSCArgObject, OSCBundleObject, OSCMessageObject } from 'simple-osc-lib/type'
+import { OSCArgObject } from 'simple-osc-lib/type'
 import { UDPListenEvent, UDPListenFreqEvent } from '../../src/lib/connection'
-
-const TWO_POW_32 = 4294967296
-const UNIX_EPOCH = 2208988800
 
 // MARK: safe element ops
 export const listenToId = ( id : string, type : string, func : EventListenerOrEventListenerObject ) => {
@@ -134,132 +131,32 @@ export const setFormEnabled = ( id : string, enabled : boolean ) => {
 	}
 }
 
-interface OSCEventType {
-	bundleTime : number | null | false
-	address    : string
-	message    : OSCMessageObject | OSCBundleObject
-	name       : string
-	port       : number
-	timestamp  : number
-}
-
-interface OSCEventMessageType extends OSCEventType {
-	message : OSCMessageObject
-}
-
-interface OSCEventBundleType extends OSCEventType {
-	message : OSCBundleObject
-}
-
-
-class OSCEvent implements OSCEventType {
-	bundleTime : number | null | false
-	address    : string
-	message    : OSCMessageObject | OSCBundleObject
-	name       : string
-	port       : number
-	timestamp  : number
-
-	constructor( v : UDPListenEvent ) {
-		this.address   = v.address
-		this.message   = v.message
-		this.name      = v.name
-		this.port      = v.port
-		this.timestamp = v.timestamp
-
-		if ( this.isBundle() ) {
-			if ( this.message.timeTag[0] === 0 && this.message.timeTag[1] === 1 ) {
-				this.bundleTime = null
-			} else {
-				const packetDate = new Date( v.timestamp )
-				const seconds    = this.message.timeTag[0] - UNIX_EPOCH
-				const fractional = parseFloat( this.message.timeTag[1].toString() ) / TWO_POW_32
-				
-				this.bundleTime = packetDate.getTime() - ( ( seconds * 1000 ) + ( fractional * 1000 ) )
-			}
-		} else {
-			this.bundleTime = false
+export const queryAInput = ( term : string ) => {
+	const items : HTMLInputElement[] = []
+	for ( const element of document.querySelectorAll( term ) ) {
+		if ( element instanceof HTMLInputElement && element !== null ) {
+			items.push( element )
 		}
 	}
-
-	isBundle() : this is OSCEventBundleType { return this.message.type === 'bundle' }
-	isSingle() : this is OSCEventMessageType { return this.message.type === 'message' }
+	return items
 }
 
+// MARK: osc Messages
 
-export const buildUDPListenEvent = ( v : UDPListenEvent ) => {
-	const packet = new OSCEvent( v )
-	safeAppend( 'osc-data-container', buildMessagePacket( packet ) )
-}
+export const buildUDPListenEvent = ( v : UDPListenEvent ) => { safeAppend( 'osc-data-container', oscBuildMessage( v ) ) }
 
 export const replaceUDPListenEvent = ( v : UDPListenEvent ) => {
-	const packet = new OSCEvent( v )
-	return replaceMessagePacket( packet )
-}
-
-export const replaceMessagePacket = ( v : OSCEvent ) => {
-	if ( v.isSingle() ) {
-		if ( replaceMessage( v ) === false ) {
-			safeAppend( 'osc-data-container', buildEachMessage( v ) )
-		}
-	} else if ( v.isBundle() ) {
-		replaceBundleMessage( v )
+	if ( ! oscReplaceMessage( v ) ) {
+		safeAppend( 'osc-data-container', oscBuildMessage( v ) )
 	}
-}
-
-export const buildMessagePacket = ( v : OSCEvent ) : string => {
-	if ( v.isSingle() ) {
-		return buildEachMessage( v )
-	} else if ( v.isBundle() ) {
-		return buildBundleMessage( v )
-	}
-	return ''
-}
-
-const replaceBundleMessage = ( v : OSCEventBundleType ) => {
-	for ( const item of v.message.messages ) {
-		if ( item.type === 'bundle' ) {
-			continue
-		}
-
-		const itemArg = {
-			address    : item.address,
-			bundleTime : v.bundleTime,
-			message    : item,
-			name       : v.name,
-			port       : v.port,
-			timestamp  : v.timestamp,
-		}
-
-		if ( replaceMessage( itemArg ) === false ) {
-			safeAppend( 'osc-data-container', buildEachMessage( itemArg ) )
-		}
-	}
-}
-
-const buildBundleMessage = ( v : OSCEventBundleType ) : string => {
-	return v.message.messages.map( ( item ) => {
-		if ( item.type === 'bundle' ) {
-			return ''
-		}
-
-		return buildEachMessage( {
-			address    : item.address,
-			bundleTime : v.bundleTime,
-			message    : item,
-			name       : v.name,
-			port       : v.port,
-			timestamp  : v.timestamp,
-		} )
-	} ).join( '\n' )
 }
 
 // eslint-disable-next-line @stylistic/newline-per-chained-call
 const getHumanDate = ( v : Date ) => `${v.getHours().toString().padStart( 2, '0' )}:${v.getMinutes().toString().padStart( 2, '0' )}:${v.getSeconds().toString().padStart( 2, '0' )}.${v.getMilliseconds().toString().padStart( 3, '0' )}`
 
-
-const buildEachMessage = ( v : OSCEventMessageType ) : string => {
+const oscBuildMessage = ( v : UDPListenEvent ) : string => {
 	const humanDate   = getHumanDate( new Date( v.timestamp ) )
+	const humanBundle = typeof v.bundleTime === 'number' ? v.timestamp - v.bundleTime : v.bundleTime
 
 	return [
 		OSCDisplayParts.start(
@@ -269,7 +166,7 @@ const buildEachMessage = ( v : OSCEventMessageType ) : string => {
 			v.port
 		),
 		OSCDisplayParts.timeStamp( humanDate ),
-		v.bundleTime === false ? '' : OSCDisplayParts.bundleTime( v.bundleTime ),
+		OSCDisplayParts.bundleTime( humanBundle ),
 		OSCDisplayParts.connection( v.name ),
 		OSCDisplayParts.address( v.message.address ),
 		'<div class="message-args">',
@@ -278,7 +175,7 @@ const buildEachMessage = ( v : OSCEventMessageType ) : string => {
 	].join( '' )
 }
 
-const replaceMessage = ( v : OSCEventMessageType ) : boolean => {
+const oscReplaceMessage = ( v : UDPListenEvent ) : boolean => {
 	const current = document.querySelector( `div[data-address="${v.message.address}"][data-connection="${v.name}"]` )
 
 	if ( current === null ) {
@@ -286,6 +183,17 @@ const replaceMessage = ( v : OSCEventMessageType ) : boolean => {
 	}
 
 	const humanDate   = getHumanDate( new Date( v.timestamp ) )
+
+	if ( typeof v.bundleTime === 'number' || v.bundleTime === null ) {
+		const bundleEle = current.querySelector( '.osc-bundle-stamp' )
+		if ( bundleEle !== null ) {
+			const content = OSCDisplayParts.bundleContent( v.bundleTime === null ? null : v.timestamp - v.bundleTime )
+			bundleEle.classList.remove( 'osc-bundle-stamp-good', 'osc-bundle-stamp-bad' )
+			bundleEle.classList.add( `osc-bundle-stamp-${content.className}` )
+			bundleEle.innerHTML = content.text
+		}
+	}
+
 	const dateEle = current.querySelector( '.osc-timestamp' )
 	if ( dateEle !== null ) {
 		dateEle.innerHTML = humanDate
@@ -317,15 +225,24 @@ export const OSCDisplayParts = {
 		}
 		return `<div title="${v.type}" class="osc-arg-${v.type}">${v.value}</div>`
 	},
-	bundleTime : ( v : number | null ) => {
-		if ( v === null ) {
-			return '<div class="osc-bundle-stamp-good" title="Instant Execution">b:I</div>'
+	bundleContent : ( v : number | null ) => {
+		return {
+			className : v === null ? 'good' : v < 0 ? 'bad' : 'good',
+			text      : v === null ? 'b:I' : `b:${v < 0 ? '' : '+'}${ v }ms`,
 		}
-		return `<div class="osc-bundle-stamp-${ v < 0 ? 'bad' : 'good' }">b:${v < 0 ? '' : '+'}${ v }ms</div>`
+	},
+	bundleTime : ( v : number | null | boolean ) => {
+		if ( v === true || v === false ) {
+			return
+		}
+		const content = OSCDisplayParts.bundleContent( v )
+		
+		return `<div class="osc-bundle-stamp osc-bundle-stamp-${content.className}">${content.text}</div>`
 	},
 	
 }
 
+// MARK: osc tick
 export const freqEntry = ( v : UDPListenFreqEvent ) => {
 	const timeString     = `${( Math.round( v.average * 10 ) / 10 ).toFixed( 1 )} m/s`
 	const sinceString    = ( v.since > 10000 ) ? '>10s' : `${( v.since / 1000 ).toFixed( 2 )}s`
@@ -355,9 +272,13 @@ export const freqEntry = ( v : UDPListenFreqEvent ) => {
 	].join( '' )
 
 	safeAppend( 'osc-connection-container', thisDiv )
-	
-	// const infoHeight = Util.byId('osc-connection-info').offsetHeight
-	// const bodyHeight = document.body.offsetHeight
-	// Util.byId('osc-data-container').style.maxHeight = `calc(${Math.floor(bodyHeight - infoHeight)}px - 1rem)`
-
 }
+
+// MARK: main settings
+
+export const makeDropDownCheck = ( dropName : string, value : string, inList : boolean = false ) => [
+	'<div class="form-check form-switch mx-2">',
+	`<input class="form-check-input" type="checkbox" role="switch" ${inList ? 'checked' : ''} value="${value}" name="${dropName}[]">`,
+	`<label class="form-check-label">${value}</label>`,
+	'</div>',
+].join( '' )

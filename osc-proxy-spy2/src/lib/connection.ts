@@ -10,8 +10,8 @@ import { Logger, MainLogger } from './logger'
 import dgram                  from 'node:dgram'
 import EventEmitter           from 'node:events'
 import net                    from 'node:net'
-import { OSCMessage, OSCArgObject, OSCPacket } from 'simple-osc-lib'
-import { OSCMessageObject, OSCBundleObject } from 'simple-osc-lib/type'
+import { OSCMessage, OSCArgObject, OSCPacket, OSCBundle, OSCBundleMessage } from 'simple-osc-lib'
+import { OSCMessageObject } from 'simple-osc-lib/type'
 
 
 type IPv4Address = string & { readonly __brand : unique symbol }
@@ -31,12 +31,22 @@ function isIPv4Port( port : number ) : port is IPv4Port {
 	throw new ConnectionError( 'invalid port' )
 }
 
+// MARK: Event Types
 export type UDPListenEvent = {
-	message   : OSCMessageObject | OSCBundleObject,
-	timestamp : number,
-	name      : string,
-	address   : string,
-	port      : number
+	bundleTime : number | boolean | null,
+	message    : OSCMessageObject,
+	timestamp  : number,
+	name       : string,
+	address    : string,
+	port       : number
+}
+
+export type UDPListenEventPart = {
+	bundleTime : number | boolean | null,
+	timestamp  : number,
+	name       : string,
+	address    : string,
+	port       : number
 }
 
 export type UDPListenFreqEvent = {
@@ -46,6 +56,7 @@ export type UDPListenFreqEvent = {
 	since   : number,
 }
 
+// MARK: UDPSender
 export type UDPSenderDef = {
 	address : string,
 	port    : number,
@@ -107,6 +118,7 @@ export class UDPSender {
 	}
 }
 
+// MARK : UDPListener
 type UDPListenerCallback = ( b : Buffer<ArrayBufferLike> ) => void
 
 export type UDPListenerDef = {
@@ -265,6 +277,7 @@ export class UDPListener {
 	}
 }
 
+// MARK: ConnectionDef
 export type ConnectionDef = {
 	connectionPrime      : UDPListenerDef | UDPSenderDef
 	enabled              : boolean
@@ -276,6 +289,7 @@ export type ConnectionDef = {
 	oscHeartBeatInterval : number | null
 }
 
+// MARK: Connection
 export class Connection extends EventEmitter {
 	#heartbeatBuffer     : Buffer<ArrayBufferLike> | null = null
 	#heartbeatInterval   : ReturnType<typeof setInterval> | null = null
@@ -302,6 +316,27 @@ export class Connection extends EventEmitter {
 		}
 	}
 
+	#emitMessage( v : UDPListenEvent ) { this.emit( 'message', v ) }
+
+	#unwrapPacket( v : OSCMessage | OSCBundle | OSCBundleMessage, emitObj : UDPListenEventPart ) {
+		if ( Buffer.isBuffer( v ) ) {
+			return
+		}
+		if ( v instanceof OSCMessage ) {
+			this.#emitMessage( {
+				...emitObj,
+				message    : v.toJSON(),
+			} )
+		}
+		if ( v instanceof OSCBundle ) {
+			const bundleEmitObj = {
+				...emitObj,
+				bundleTime : ( v.timeTag.value[0] === 0 && v.timeTag.value[1] === 1 ) ? null : ( v.timeTag.asDate ).getTime(),
+			}
+			for ( const item of v.messages ) { this.#unwrapPacket( item, bundleEmitObj ) }
+		}
+	}
+
 	oscInputCallback( b : Buffer<ArrayBufferLike> ) {
 		if ( Buffer.isBuffer( b ) && b.length !== 0 ) {
 			for ( const forwarder of this.forwarders ) { forwarder.send( b ) }
@@ -310,14 +345,15 @@ export class Connection extends EventEmitter {
 			try {
 				const message = OSCPacket.fromBuffer( b )
 
-				const emitMessage : UDPListenEvent = {
-					address   : this.connectionPrime.listenAddress,
-					message   : message.toJSON(),
-					name      : this.name,
-					port      : this.connectionPrime.listenPort,
-					timestamp : ( new Date() ).getTime(),
+				const emitObj = {
+					address    : this.connectionPrime.listenAddress,
+					bundleTime : false,
+					name       : this.name,
+					port       : this.connectionPrime.listenPort,
+					timestamp  : ( new Date() ).getTime(),
 				}
-				this.emit( 'message', emitMessage )
+
+				this.#unwrapPacket( message, emitObj )
 			} catch( err ) {
 				if ( err instanceof Error ) {
 					this.#log.info( `OSC Decode Error :: ${err.message}` )

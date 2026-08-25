@@ -4,6 +4,7 @@ import started from 'electron-squirrel-startup'
 import * as packJSON from '../package.json' with { type : 'json' }
 import { MainLogger } from './lib/logger'
 import { Settings } from './lib/settings'
+import { UDPListenEvent, UDPListenFreqEvent } from './lib/connection'
 
 const debug = !app.isPackaged && true
 
@@ -51,9 +52,28 @@ app.on( 'ready', () => {
 	ipcMain.handle( 'log:new', () => log.last )
 
 	ipcMain.handle( 'settings:get', () => settings.save() )
+	ipcMain.handle( 'settings:save', ( _, key : string, value ) => {
+		switch ( key ) {
+			case 'excludeConnection' :
+				settings.excludeConnection = value
+				break
+			case 'excludeType' :
+				settings.excludeType = value
+				break
+			case 'matchTerm' :
+				settings.matchTerm = value
+				break
+			case 'modeAll' :
+				settings.modeAll = value
+				break
+			default :
+				break
+		}
+		return settings.save()
+	} )
 
-	settings.on( 'message',   ( v ) => { mainWindow.webContents.send( 'osc:data', v ) } )
-	settings.on( 'frequency', ( v ) => { mainWindow.webContents.send( 'osc:tick', v ) } )
+	settings.on( 'message',   ( v : UDPListenEvent )       => { safeSend( 'osc:data', v ) } )
+	settings.on( 'frequency', ( v : UDPListenFreqEvent[] ) => { safeSend( 'osc:tick', v ) } )
 } )
 
 app.on( 'before-quit', () => { settings.saveToDisk() } )

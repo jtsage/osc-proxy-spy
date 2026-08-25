@@ -18,42 +18,42 @@ import { networkInterfaces } from 'node:os'
 export type SettingsDef = {
 	connections       : Connect.ConnectionDef[]
 	excludeConnection : string[]
-	excludeType       : OSCArgObject['type'][]
+	excludeType       : Array<OSCArgObject['type'] | 'other'>
+	matchTerm         : string | null
 	modeAll           : boolean
-	modeTime          : boolean
 }
 
 const SettingsDefault : SettingsDef = {
 	connections       : [],
 	excludeConnection : [],
 	excludeType       : [],
+	matchTerm         : null,
 	modeAll           : true,
-	modeTime          : true,
 }
 
 
 export class Settings extends EventEmitter {
 	#connections         : Connect.Connection[] = []
 	#excludeConnection ! : string[]
-	#excludeType       ! : OSCArgObject['type'][]
+	#excludeType       ! : Array<OSCArgObject['type'] | 'other'>
 	#intervalFreq        : ReturnType<typeof setInterval> | null = null
 	#log                 : MainLogger
+	#matchTerm           : string | null = null
 	#modeAll           ! : boolean
-	#modeTime          ! : boolean
 
 	get displayOptions() {
 		return {
 			excludeConnection : this.#excludeConnection,
 			excludeType       : this.#excludeType,
+			matchTerm         : this.#matchTerm,
 			modeAll           : this.#modeAll,
-			modeTime          : this.#modeTime,
 		}
 	}
 
 	set excludeConnection( v : string[] )         { this.#excludeConnection = v; this.saveToDisk() }
 	set excludeType( v : OSCArgObject['type'][] ) { this.#excludeType = v; this.saveToDisk() }
 	set modeAll( v : boolean )                    { this.#modeAll = v; this.saveToDisk() }
-	set modeTime( v : boolean )                   { this.#modeTime = v; this.saveToDisk() }
+	set matchTerm( v : string )                   { this.#matchTerm = v; this.saveToDisk() }
 
 	constructor( l : MainLogger ) {
 		super()
@@ -86,10 +86,53 @@ export class Settings extends EventEmitter {
 		this.emit( 'frequency', results )
 	}
 
+	#emitWithChecks( v : Connect.UDPListenEvent ) {
+		// excluded collections
+		if ( this.#excludeConnection.length !== 0 && this.#excludeConnection.includes( v.name ) ) {
+			return
+		}
+		// excluded types
+		
+		if ( this.#excludeType.length !== 0 ) {
+
+			const realExclude = ! this.#excludeType.includes( 'other' ) ?
+				this.#excludeType :
+				[
+					...this.#excludeType,
+					'bigint', 'arrayOpen', 'arrayClose', 'blob',
+					'true', 'false', 'null', 'bang', 'color', 'char', 'midi'
+				]
+
+			for ( const arg of v.message.elements ) {
+				if ( realExclude.includes( arg.type ) ) {
+					return
+				}
+			}
+		}
+
+		if ( this.#matchTerm !== null && this.#matchTerm !== '' ) {
+			const regExpPattern = this.#matchTerm
+				.replaceAll( '.', '\\.' )
+				.replaceAll( /{(.+?)}/g, ( _, grp ) => `(${grp.replaceAll( ',', '|' )})` )
+				.replaceAll( /\[(.+?)]/g, '([$1])' )
+				.replaceAll( '?', '([^/])' )
+				.replaceAll( '*', '([^/]*)' )
+				.replaceAll( '\\', '\\\\' )
+
+			const regExpCompiled = new RegExp( `${regExpPattern}` )
+			const matches = regExpCompiled.exec( v.message.address )
+			if ( matches === null ) {
+				return
+			}
+		}
+
+		this.emit( 'message', v )
+	}
+
 	addConnect( v : Connect.ConnectionDef ) {
 		const connection = new Connect.Connection( v, this.#log )
 		this.#connections.push( connection )
-		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.emit( 'message', u ) } )
+		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
 		this.saveToDisk()
 	}
 
@@ -97,7 +140,7 @@ export class Settings extends EventEmitter {
 		this.#connections[i].close()
 		const connection = new Connect.Connection( v, this.#log )
 		this.#connections[i] = connection
-		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.emit( 'message', u ) } )
+		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
 		this.saveToDisk()
 	}
 
@@ -113,13 +156,13 @@ export class Settings extends EventEmitter {
 		for ( const con of mergedDefault.connections ) {
 			const connection = new Connect.Connection( con, this.#log )
 			this.#connections.push( connection )
-			connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.emit( 'message', u ) } )
+			connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
 		}
 
 		this.#excludeConnection = mergedDefault.excludeConnection
 		this.#excludeType       = mergedDefault.excludeType
+		this.#matchTerm         = mergedDefault.matchTerm
 		this.#modeAll           = mergedDefault.modeAll
-		this.#modeTime          = mergedDefault.modeTime
 	}
 
 	save() : SettingsDef {
@@ -127,8 +170,8 @@ export class Settings extends EventEmitter {
 			connections       : this.#connections.map( ( item ) => item.toJSON() ),
 			excludeConnection : this.#excludeConnection,
 			excludeType       : this.#excludeType,
+			matchTerm         : this.#matchTerm,
 			modeAll           : this.#modeAll,
-			modeTime          : this.#modeTime,
 		}
 	}
 
