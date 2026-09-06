@@ -267,6 +267,7 @@ export const connectStartUp = () => {
 // MARK: con buttons
 export const parseConnections = ( v : SettingsDef ) => {
 	conSettings = v
+	util.setInnerHTML( 'osc-connection-container', '' )
 	util.setInnerHTML( 'connect-list', '' )
 
 	for ( const [idx, item] of conSettings.connections.entries() ) {

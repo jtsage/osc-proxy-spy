@@ -14,7 +14,7 @@ const config : ForgeConfig = {
 		appCategoryType : 'public.app-category.developer-tools',
 		asar            : true,
 		icon            : 'icon/icon',
-		name            : 'TheaterTime',
+		name            : 'OSCProxySpy',
 	},
 	plugins : [
 		new VitePlugin( {
