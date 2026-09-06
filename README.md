@@ -69,14 +69,14 @@ Zero or more IP/port combinations to forward all received traffic to.  Data is s
 
 The heartbeat options sends the configured OSC message continuously with a __Time__ delay (in milliseconds) to the primary send address/port. (For instance, the X32 requires `/xremote` to be sent every ~10s)
 
-## Licsense
+## License
 
 This is covered under the MIT license, provided as-is with no warranty. Do what you like with it, if you add something useful, consider contributing to the project with the changes.
 
 ## A Note About Code Signing
 
-The developer cannot afford to purchase a code signing certificate for this project, so it is unsigned.  This doesn't cause too much of an issue on Windows, but is a hassle on Mac.  A web search will show more detail on running unsiged apps on mac, but you likely need to remove the quarentine flag: 
+The developer cannot afford to purchase a code signing certificate for this project, so it is unsigned.  This doesn't cause too much of an issue on Windows, but is a hassle on Mac.  A web search will show more detail on running unsigned apps on mac, but you likely need to remove the quarantine flag:
 
 `xattr -r -d com.apple.quarantine /path/to/the/downloaded/app`
 
-&copy; 2026 J.T.Sage
+&copy; 2026 J.T.Sag
