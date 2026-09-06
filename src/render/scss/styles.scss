@@ -1,10 +1,28 @@
-/*                   ____                      ____              
- *     ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _ 
- *    / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | |
- *   | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| |
- *    \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, |
- *                                       |___/      |_|    |___/ 
- * (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy> */
+@import "bootstrap/scss/bootstrap";
+
+// Update the import directory to point to it‘s location within node_modules
+$bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
+
+// Import the Sass files as usual
+@import "bootstrap-icons/font/bootstrap-icons";
+
+#operation-good, #operation-bad {
+	left:30%; top:0px; z-index:2000;
+}
+
+#osc-connection-info {
+	height : 90px !important;
+}
+
+#osc-connection-main {
+	height : calc(100vh - 90px) !important;
+}
+
+#osc-data-container>div, #log-data-container>div {
+	display       : flex !important;
+	flex-wrap     : nowrap !important;
+	margin-bottom : 4px;
+}
 
 #osc-data-container, #log-data-container {
 	overflow-x : auto;
@@ -17,6 +35,14 @@
 	margin-bottom : 4px;
 }
 
+.message-args {
+	display: inline-flex !important;
+}
+
+.data-osc {
+	white-space: nowrap;
+}
+
 .osc-address {
 	background-color : RGBA(var(--bs-primary-rgb), var(--bs-bg-opacity, 1)) !important;
 	border-radius    : 0.175rem !important;
@@ -26,32 +52,33 @@
 	margin-right     : 6px !important;
 }
 
-.osc-integer, .osc-integer64 {
+.osc-arg-integer, .osc-arg-integer64 {
 	background-color : RGBA(var(--bs-info-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #000 !important;
 }
 
-.osc-float, .osc-float64 {
+.osc-arg-float, .osc-arg-float64 {
 	background-color : RGBA(var(--bs-warning-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #000 !important;
 }
 
-.osc-string, .osc-char {
+.osc-arg-string, .osc-arg-char {
 	background-color : RGBA(var(--bs-success-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #fff !important;
 }
 
-.osc-integer64, .osc-float64, .osc-char {
+.osc-arg-integer64, .osc-arg-float64, .osc-arg-char {
 	font-style : italic !important;
 }
 
-.osc-timetag, .osc-timestamp {
+.osc-timetag, .osc-timestamp { // cSpell:disable-line
 	background-color : RGBA(var(--bs-secondary-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #fff !important;
 }
 
 .osc-timestamp {
 	border-radius : 0 !important;
+	font-family: monospace;
 }
 
 .osc-bundle-stamp-good, .osc-bundle-stamp-bad {
@@ -67,17 +94,17 @@
 	background-color : var(--bs-form-invalid-color) !important;
 }
 
-.osc-null {
+.osc-arg-null {
 	background-color : RGBA(var(--bs-light-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #333 !important;
 }
 
-.osc-blob {
+.osc-arg-blob {
 	background-color : var(--bs-gray-700) !important;
 	color            : #000 !important;
-}
+}ß
 
-.osc-unknown {
+.osc-arg-unknown {
 	background-color : RGBA(var(--bs-danger-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #fff !important;
 }
@@ -137,6 +164,21 @@
 	100% {
 		background-color : var(--bs-gray-800);
 	}
+}
+
+@keyframes horizontal-shaking {
+	0% { transform: translateX(0) }
+	25% { transform: translateX(5px) }
+	50% { transform: translateX(-5px) }
+	75% { transform: translateX(5px) }
+	100% { transform: translateX(0) }
+}
+
+.save-bad {
+	animation-duration        : 250ms;
+	animation-iteration-count : 1;
+	animation-name            : horizontal-shaking;
+	animation-timing-function : ease-in;
 }
 
 .osc-tick-time {
