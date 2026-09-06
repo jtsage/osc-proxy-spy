@@ -58,15 +58,15 @@ export type UDPListenFreqEvent = {
 
 // MARK: UDPSender
 export type UDPSenderDef = {
-	address : string,
-	port    : number,
-	type    : 'sender',
+	sendAddress : string,
+	sendPort    : number,
+	type        : 'sender',
 }
 
 export class UDPSender {
-	address ! : IPv4Address
-	log       : Logger
-	port    ! : IPv4Port
+	sendAddress ! : IPv4Address
+	log           : Logger
+	sendPort    ! : IPv4Port
 
 	constructor( config : UDPSenderDef, logger : Logger ) {
 		if ( typeof logger !== 'object' ) {
@@ -75,11 +75,11 @@ export class UDPSender {
 		this.log = logger
 
 		try {
-			if ( isIPv4( config.address ) ) {
-				this.address = config.address
+			if ( isIPv4( config.sendAddress ) ) {
+				this.sendAddress = config.sendAddress
 			}
-			if ( isIPv4Port( config.port ) ) {
-				this.port = config.port
+			if ( isIPv4Port( config.sendPort ) ) {
+				this.sendPort = config.sendPort
 			}
 		} catch( err ) {
 			if ( err instanceof ConnectionError ) {
@@ -94,13 +94,13 @@ export class UDPSender {
 		const client = dgram.createSocket( 'udp4' )
 
 		if ( !Buffer.isBuffer( buffer ) || buffer.length === 0 ) {
-			this.log.warn( `send to ${this.address}:${this.port} failed :: empty or non-buffer` )
+			this.log.warn( `send to ${this.sendAddress}:${this.sendPort} failed :: empty or non-buffer` )
 			return
 		}
 
-		client.send( buffer, 0, buffer.length, this.port, this.address, ( err ) => {
+		client.send( buffer, 0, buffer.length, this.sendPort, this.sendAddress, ( err ) => {
 			if ( err ) {
-				this.log.warn( `send to ${this.address}:${this.port} failed :: ${err.message}` )
+				this.log.warn( `send to ${this.sendAddress}:${this.sendPort} failed :: ${err.message}` )
 			}
 			client.close()
 		} )
@@ -108,12 +108,13 @@ export class UDPSender {
 
 	isSender()   : this is UDPSender   { return true }
 	isListener() : this is UDPListener { return false}
+	isBoth()     : this is UDPBoth     { return false}
 
 	toJSON() : UDPSenderDef {
 		return {
-			address : this.address,
-			port    : this.port,
-			type    : 'sender',
+			sendAddress : this.sendAddress,
+			sendPort    : this.sendPort,
+			type        : 'sender',
 		}
 	}
 }
@@ -124,21 +125,16 @@ type UDPListenerCallback = ( b : Buffer<ArrayBufferLike> ) => void
 export type UDPListenerDef = {
 	listenAddress : string,
 	listenPort    : number,
-	sendAddress   : string,
-	sendPort      : number,
 	type          : 'listen'
 }
 
 export class UDPListener {
 	#lastSix        : number[] = []
-	#sharedPort     : boolean = false
 	#socket         : dgram.Socket | null = null
 	callback        : UDPListenerCallback
 	enabled         : boolean = true
 	listenAddress ! : IPv4Address
 	listenPort    ! : IPv4Port
-	sendAddress   ! : IPv4Address
-	sendPort      ! : IPv4Port
 	log             : Logger
 
 	constructor( enabled : boolean, config : UDPListenerDef, logger : Logger, callback : UDPListenerCallback ) {
@@ -150,6 +146,131 @@ export class UDPListener {
 		}
 		this.callback = callback
 		this.log      = logger
+		this.enabled  = enabled
+
+		try {
+			if ( isIPv4( config.listenAddress ) ) {
+				this.listenAddress = config.listenAddress
+			}
+			if ( isIPv4Port( config.listenPort ) ) {
+				this.listenPort = config.listenPort
+			}
+		} catch( err ) {
+			if ( err instanceof ConnectionError ) {
+				this.log.error( err.message )
+				throw new ConnectionError( `unable to create UDPSender connection :: ${err.message}` )
+			}
+			throw err
+		}
+
+		this.open()
+	}
+
+	close() {
+		if ( this.#socket !== null ) {
+			this.#socket.close()
+			this.#socket = null
+		}
+	}
+
+	open() {
+		this.#lastSix.length = 0
+		if ( !this.enabled ) {
+			return
+		}
+		this.#socket = dgram.createSocket( { type : 'udp4', reuseAddr : true } )
+
+		this.#socket.on( 'message', ( buffer ) => {
+			if ( this.#lastSix.length > 20 ) {
+				this.#lastSix.shift()
+			}
+			this.#lastSix.push( ( new Date() ).getTime() )
+			this.callback( buffer )
+		} )
+
+		this.#socket.on( 'error', ( err ) => {
+			this.log.error( `socket error, closing :: ${err.message}` )
+			this.close()
+		} )
+
+		this.#socket.on( 'listening', () => { this.log.info( 'connection opened' ) } )
+
+		try {
+			this.#socket.bind( this.listenPort, this.listenAddress )
+		} catch( err ) {
+			if ( err instanceof Error ) {
+				this.log.error( `connection bind error :: ${err.message}` )
+			} else {
+				this.log.error( 'connection bind error :: unknown' )
+			}
+			this.#socket = null
+		}
+	}
+
+	get sinceEver() { return this.#lastSix.length !== 0 }
+	get sinceLast() {
+		if ( this.#lastSix.length === 0 ) {
+			return Infinity
+		}
+		return ( new Date() ).getTime() - this.#lastSix[this.#lastSix.length - 1]
+	}
+
+	get frequency() {
+		if ( this.#lastSix.length < 2 ) {
+			return 0
+		}
+		const lenMinOne = this.#lastSix.length - 1
+		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
+	}
+
+	isSender()   : this is UDPSender   { return false }
+	isListener() : this is UDPListener { return true  }
+	isBoth()     : this is UDPBoth     { return false }
+	ok()         : boolean { return this.#socket !== null }
+
+	send( _buffer : Buffer<ArrayBufferLike> ) { this.log.warn( 'attempt to send to listener only failed' ) }
+
+	toJSON() : UDPListenerDef {
+		return {
+			listenAddress : this.listenAddress,
+			listenPort    : this.listenPort,
+			type          : 'listen',
+		}
+	}
+}
+
+//MARK: UDPBoth
+
+export type UDPBothDef = {
+	listenAddress : string,
+	listenPort    : number,
+	sendAddress   : string,
+	sendPort      : number,
+	type          : 'both'
+}
+
+export class UDPBoth {
+	#lastSix        : number[] = []
+	#sharedPort     : boolean = false
+	#socket         : dgram.Socket | null = null
+	callback        : UDPListenerCallback
+	enabled         : boolean = true
+	listenAddress ! : IPv4Address
+	listenPort    ! : IPv4Port
+	sendAddress   ! : IPv4Address
+	sendPort      ! : IPv4Port
+	log             : Logger
+
+	constructor( enabled : boolean, config : UDPBothDef, logger : Logger, callback : UDPListenerCallback ) {
+		if ( typeof logger !== 'object' ) {
+			throw new ConnectionError( 'logger needed' )
+		}
+		if ( ! ( typeof callback === 'function' ) ) {
+			throw new ConnectionError( 'callback needed' )
+		}
+		this.callback = callback
+		this.log      = logger
+		this.enabled  = enabled
 
 		try {
 			if ( isIPv4( config.listenAddress ) ) {
@@ -236,8 +357,9 @@ export class UDPListener {
 		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
 	}
 
-	isSender()   : this is UDPSender   { return false }
-	isListener() : this is UDPListener { return true}
+	isSender()   : this is UDPSender   { return false}
+	isListener() : this is UDPListener { return false}
+	isBoth()     : this is UDPBoth     { return true}
 	ok()         : boolean { return this.#socket !== null }
 
 	send( buffer : Buffer<ArrayBufferLike> ) {
@@ -256,7 +378,7 @@ export class UDPListener {
 				client.close()
 			} )
 		} else if ( this.#socket !== null ) {
-			this.#socket.send( buffer, ( err ) => {
+			this.#socket.send( buffer, 0, buffer.length, this.sendPort, this.sendAddress, ( err ) => {
 				if ( err ) {
 					this.log.warn( `send to ${this.sendAddress}:${this.sendPort} failed :: ${err.message}` )
 				}
@@ -266,20 +388,20 @@ export class UDPListener {
 		}
 	}
 
-	toJSON() : UDPListenerDef {
+	toJSON() : UDPBothDef {
 		return {
 			listenAddress : this.listenAddress,
 			listenPort    : this.listenPort,
 			sendAddress   : this.sendAddress,
 			sendPort      : this.sendPort,
-			type          : 'listen',
+			type          : 'both',
 		}
 	}
 }
 
 // MARK: ConnectionDef
 export type ConnectionDef = {
-	connectionPrime      : UDPListenerDef | UDPSenderDef
+	connectionPrime      : UDPListenerDef | UDPSenderDef | UDPBothDef
 	enabled              : boolean
 	forwarders           : UDPSenderDef[]
 	name                 : string
@@ -294,7 +416,7 @@ export class Connection extends EventEmitter {
 	#heartbeatBuffer     : Buffer<ArrayBufferLike> | null = null
 	#heartbeatInterval   : ReturnType<typeof setInterval> | null = null
 	#log                 : Logger
-	connectionPrime      : UDPListener | UDPSender
+	connectionPrime      : UDPListener | UDPSender | UDPBoth
 	enabled              : boolean = true
 	forwarders           : UDPSender[] = []
 	name                 : string
@@ -341,7 +463,7 @@ export class Connection extends EventEmitter {
 		if ( Buffer.isBuffer( b ) && b.length !== 0 ) {
 			for ( const forwarder of this.forwarders ) { forwarder.send( b ) }
 		}
-		if ( this.connectionPrime.isListener() ) {
+		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth() ) {
 			try {
 				const message = OSCPacket.fromBuffer( b )
 
@@ -366,10 +488,12 @@ export class Connection extends EventEmitter {
 
 	close() {
 		if ( this.#heartbeatInterval !== null ) {
+			this.#log.debug( 'Stopping Heartbeat Interval' )
 			clearInterval( this.#heartbeatInterval )
 			this.#heartbeatInterval = null
 		}
-		if ( this.connectionPrime.isListener() ) {
+		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth() ) {
+			this.#log.debug( 'Closing connection' )
 			this.connectionPrime.close()
 		}
 	}
@@ -384,13 +508,16 @@ export class Connection extends EventEmitter {
 		
 		super()
 
-		this.name = v.name
-		this.#log = l.subLog( `Connection::${v.name}` )
+		this.name    = v.name
+		this.#log    = l.subLog( `Connection::${v.name}` )
+		this.enabled = v.enabled
 
 		this.oscHeartBeatEnabled = v.oscHeartBeatEnabled
 
 		if ( v.connectionPrime.type === 'sender' ) {
 			this.connectionPrime = new UDPSender( v.connectionPrime, this.#log )
+		} else if ( v.connectionPrime.type === 'both' ) {
+			this.connectionPrime = new UDPBoth( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
 		} else {
 			this.connectionPrime = new UDPListener( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
 		}
@@ -441,7 +568,7 @@ export class Connection extends EventEmitter {
 				this.oscHeartBeatArgs     = v.oscHeartBeatArgs
 				this.oscHeartBeatInterval = v.oscHeartBeatInterval ?? 1000
 
-				if ( this.oscHeartBeatEnabled ) {
+				if ( this.oscHeartBeatEnabled && this.enabled ) {
 					this.#heartbeatInterval = setInterval( () => {
 						if ( this.#heartbeatBuffer !== null ) {
 							this.connectionPrime.send( this.#heartbeatBuffer )

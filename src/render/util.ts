@@ -42,12 +42,28 @@ export const getSelectValue = ( id : string ) : string | null => {
 	return null
 }
 
+export const getSafeSelectValue = ( id : string, oldValue : string ) : string => {
+	const element = getId( id )
+	if ( element instanceof HTMLSelectElement && element !== null ) {
+		return element.value
+	}
+	return oldValue
+}
+
 export const getFormValue = ( id : string ) : string | null => {
 	const element = getId( id )
 	if ( element instanceof HTMLInputElement && element !== null ) {
 		return element.value
 	}
 	return null
+}
+
+export const getSafeFormValue = ( id : string, oldValue : string ) : string => {
+	const element = getId( id )
+	if ( element instanceof HTMLInputElement && element !== null ) {
+		return element.value
+	}
+	return oldValue
 }
 
 export const getFormCheck = ( id : string ) : boolean => {
@@ -131,6 +147,13 @@ export const setFormEnabled = ( id : string, enabled : boolean ) => {
 	}
 }
 
+export const setButtonEnabled = ( id : string, enabled : boolean ) => {
+	const element = getId( id )
+	if ( element instanceof HTMLButtonElement && element !== null ) {
+		element.disabled = !enabled
+	}
+}
+
 export const queryAInput = ( term : string ) => {
 	const items : HTMLInputElement[] = []
 	for ( const element of document.querySelectorAll( term ) ) {
@@ -140,6 +163,19 @@ export const queryAInput = ( term : string ) => {
 	}
 	return items
 }
+
+// MARK: feedback and UI utility
+const operationFeedback = ( id : string ) => {
+	classRemove( id, ['d-none', 'hide'] )
+	classAdd( id, 'show' )
+	setTimeout( () => {
+		classAdd( id, ['hide', 'd-none'] )
+		classRemove( id, 'show' )
+	}, 1000 )
+}
+export const goodOperation = () => { operationFeedback( 'operation-good' ) }
+export const badOperation  = () => { operationFeedback( 'operation-bad' ) }
+export const clearDisplay = () => { setInnerHTML( 'osc-data-container', '' ) }
 
 // MARK: osc Messages
 

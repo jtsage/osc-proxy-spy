@@ -39,6 +39,10 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 	display: inline-flex !important;
 }
 
+.data-osc {
+	white-space: nowrap;
+}
+
 .osc-address {
 	background-color : RGBA(var(--bs-primary-rgb), var(--bs-bg-opacity, 1)) !important;
 	border-radius    : 0.175rem !important;
@@ -160,6 +164,21 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 	100% {
 		background-color : var(--bs-gray-800);
 	}
+}
+
+@keyframes horizontal-shaking {
+	0% { transform: translateX(0) }
+	25% { transform: translateX(5px) }
+	50% { transform: translateX(-5px) }
+	75% { transform: translateX(5px) }
+	100% { transform: translateX(0) }
+}
+
+.save-bad {
+	animation-duration        : 250ms;
+	animation-iteration-count : 1;
+	animation-name            : horizontal-shaking;
+	animation-timing-function : ease-in;
 }
 
 .osc-tick-time {

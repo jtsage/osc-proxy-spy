@@ -2,99 +2,85 @@
 <html lang="en-US">
 	<head>
 		<meta charset="UTF-8">
-		<meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+		<meta http-equiv="Content-Security-Policy" content="script-src 'self'; style-src 'self' 'unsafe-inline'">
 		<title>OSC Proxy Spy</title>
-		<link rel="stylesheet" href="inc/bootstrap.min.css">
-		<link rel="stylesheet" href="inc/bootstrap-icons.css">
-		<link rel="stylesheet" href="inc/oscspy.css">
-		<!--                 ____                      ____               -->
-		<!--   ___  ___  ___|  _ \ _ __ _____  ___   _/ ___| _ __  _   _  -->
-		<!--  / _ \/ __|/ __| |_) | '__/ _ \ \/ / | | \___ \| '_ \| | | | -->
-		<!-- | (_) \__ \ (__|  __/| | | (_) >  <| |_| |___) | |_) | |_| | -->
-		<!--  \___/|___/\___|_|   |_|  \___/_/\_\\__, |____/| .__/ \__, | -->
-		<!--                                     |___/      |_|    |___/  -->
-		<!-- (c) 2024 JTSage <https://github.com/jtsage/osc-proxy-spy>    -->
-		<script src="inc/bootstrap.bundle.min.js"></script>
-		<script src="render-osc.js"></script>
+		<script type="module" src="./renderer.ts"></script>
+
 	</head>
 	<body data-bs-theme="dark">
 		<div class="container-fluid vh-100">
-			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-good" style="left:30%; top:0px; z-index:2000;">
+			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-good">
 				<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="90%" fill="rgba(35,135,84,0.5)" class="bi bi-hand-thumbs-up-fill" viewBox="0 0 16 16">
 					<path d="M6.956 1.745C7.021.81 7.908.087 8.864.325l.261.066c.463.116.874.456 1.012.965.22.816.533 2.511.062 4.51a10 10 0 0 1 .443-.051c.713-.065 1.669-.072 2.516.21.518.173.994.681 1.2 1.273.184.532.16 1.162-.234 1.733q.086.18.138.363c.077.27.113.567.113.856s-.036.586-.113.856c-.039.135-.09.273-.16.404.169.387.107.819-.003 1.148a3.2 3.2 0 0 1-.488.901c.054.152.076.312.076.465 0 .305-.089.625-.253.912C13.1 15.522 12.437 16 11.5 16H8c-.605 0-1.07-.081-1.466-.218a4.8 4.8 0 0 1-.97-.484l-.048-.03c-.504-.307-.999-.609-2.068-.722C2.682 14.464 2 13.846 2 13V9c0-.85.685-1.432 1.357-1.615.849-.232 1.574-.787 2.132-1.41.56-.627.914-1.28 1.039-1.639.199-.575.356-1.539.428-2.59z"/>
 				</svg>
 			</div>
-			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-bad" style="left:30%; top:0px; z-index:2000;">
+			<div class="d-block position-absolute h-100 text-center fade hide d-none" id="operation-bad">
 				<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="90%" fill="rgba(187,33,32,0.5)" class="bi bi-hand-thumbs-down-fill" viewBox="0 0 16 16">
 					<path d="M6.956 14.534c.065.936.952 1.659 1.908 1.42l.261-.065a1.38 1.38 0 0 0 1.012-.965c.22-.816.533-2.512.062-4.51q.205.03.443.051c.713.065 1.669.071 2.516-.211.518-.173.994-.68 1.2-1.272a1.9 1.9 0 0 0-.234-1.734c.058-.118.103-.242.138-.362.077-.27.113-.568.113-.856 0-.29-.036-.586-.113-.857a2 2 0 0 0-.16-.403c.169-.387.107-.82-.003-1.149a3.2 3.2 0 0 0-.488-.9c.054-.153.076-.313.076-.465a1.86 1.86 0 0 0-.253-.912C13.1.757 12.437.28 11.5.28H8c-.605 0-1.07.08-1.466.217a4.8 4.8 0 0 0-.97.485l-.048.029c-.504.308-.999.61-2.068.723C2.682 1.815 2 2.434 2 3.279v4c0 .851.685 1.433 1.357 1.616.849.232 1.574.787 2.132 1.41.56.626.914 1.28 1.039 1.638.199.575.356 1.54.428 2.591"/>
 				</svg>
 			</div>
 
 			<div class="row vh-100 flex-column flex-nowrap">
-				<div class="col-12 flex-grow-1 flex-shrink-1 overflow-hidden">
+				<div class="col-12 flex-grow-1 flex-shrink-1 overflow-hidden g-0 ps-1">
 					<!-- MAIN PAGE -->
 					<div class="h-100 d-flex flex-column page-tab-pane" id="home-tab-pane">
-						<div class="d-flex flex-column h-100">
-							<div class="d-flex h-100 gx-3 user-select-none">
+						<div class="d-flex flex-column" id="osc-connection-main">
+							<div class="d-flex gx-3 user-select-none h-100" >
 								<div class="col-3 py-2 pe-1 d-flex flex-column justify-content-evenly align-items-center">
 									<div class="w-100">
-										<div class="h5 mb-0 text-center" data-i18n-string>Control</div>
+										<div class="h5 mb-0 text-center">Control</div>
 										<div class="btn btn-sm btn-success w-100 mt-1" id="pauseButton">
-											<span id="pauseButton_go"><i class="bi bi-play-fill float-start"></i> <span data-i18n-string>Pause Display</span></span>
-											<span id="pauseButton_stop" class="d-none"><i class="bi bi-pause-fill float-start"></i> <span data-i18n-string>Resume Display</span></span>
+											<span id="pauseButton_go"><i class="bi bi-play-fill float-start"></i> <span>Pause Display</span></span>
+											<span id="pauseButton_stop" class="d-none"><i class="bi bi-pause-fill float-start"></i> <span>Resume Display</span></span>
 										</div>
 										<div class="btn btn-sm btn-warning w-100 mt-2" id="clearButton">
-											<i class="bi bi-x-octagon float-start"></i> <span data-i18n-string>Clear Display</span>
+											<i class="bi bi-x-octagon float-start"></i> <span>Clear Display</span>
 										</div>
 									</div>
 									<div class="w-100">
-										<div class="h5 mb-0 text-center" data-i18n-string>Data</div>
+										<div class="h5 mb-0 text-center">Data</div>
 										<div class="btn btn-sm btn-primary w-100 mt-1" id="singleButton">
-											<span id="singleMode_off"><i class="bi bi-list-ol float-start"></i> <span data-i18n-string>Display Mode : All</span></span>
-											<span id="singleMode_on" class="d-none"><i class="bi bi-list-task float-start"></i> <span data-i18n-string>Display Mode : Per Address</span></span>
-										</div>
-										<div class="btn btn-sm btn-primary w-100 mt-2" id="dateButton">
-											<span id="dateMode_off"><i class="bi bi-bell-slash float-start"></i> <span data-i18n-string>Display Time Data : No</span></span>
-											<span id="dateMode_on" class="d-none"><i class="bi bi-bell float-start"></i> <span data-i18n-string>Display Time Data : Yes</span></span>
+											<span id="singleMode_off"><i class="bi bi-list-ol float-start"></i> <span>Display Mode : All</span></span>
+											<span id="singleMode_on" class="d-none"><i class="bi bi-list-task float-start"></i> <span>Display Mode : Per Address</span></span>
 										</div>
 									</div>
 									<div class="w-100">
-										<div class="h5 mb-0 text-center" data-i18n-string>Filters</div>
+										<div class="h5 mb-0 text-center">Filters</div>
 										<div class="input-group mt-1 rounded">
-											<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-string>Exclude Connection</button>
+											<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false">Exclude Connection</button>
 											<div class="dropdown-menu w-100" id="connection-view-filter">
 											</div>
 										</div>
 										<div class="input-group mt-2 rounded">
-											<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-string>Exclude Types</button>
+											<button class="btn btn-primary btn-sm w-100 dropdown-toggle" data-bs-auto-close="outside" type="button" data-bs-toggle="dropdown" aria-expanded="false">Exclude Types</button>
 											<div class="dropdown-menu w-100" id="connection-type-filter"></div>
 										</div>
 									</div>
 									<div class="w-100">
-										<div class="h5 mb-0 text-center" data-i18n-string>Address Limit</div>
-										<input type="text" class="w-100 form-control form-control-sm mt-1" id="address-limit" placeholder="/example/address">
+										<div class="h5 mb-0 text-center">Address Matcher</div>
+										<input type="text" class="w-100 form-control form-control-sm mt-1" id="address-limit" placeholder="/fader/*/mix">
 									</div>
 								</div>
 								<div class="ps-2 col-9 d-flex flex-column">
-									<div class="my-2 p-1 h-100 shadow border border-black" id="osc-data-container"></div>
+									<div class="my-2 p-1 h-100 shadow border border-black overflow-scroll" id="osc-data-container"></div>
 								</div>
 							</div>
 						</div>
-						<div class="border-top" id="osc-connection-info">
+						<div class="border-top pe-1" id="osc-connection-info">
 							<div id="osc-send-div" class="mt-2 d-flex flex-row">
 								<select class="form-select form-select-sm border-black rounded-0 rounded-start w-auto bg-body-tertiary send-input" id="send-destination">
-									<option value="0" selected>n/a</option>
+									<option value="-1" selected>n/a</option>
 								</select>
 								<input type="text" class="form-control form-control-sm w-25 rounded-0 border-black send-input" placeholder="/address" id="send-address">
 								<div class="p-1 shadow border-top border-bottom border-black rounded-0 flex-grow-1 d-flex flex-wrap flex-row justify-content-start osc-send-container">
 									<div id="osc-add-args" class="d-flex flex-wrap flex-row justify-content-start"></div>
 									<div class="osc-add" id="send-button-add"><i class="bi bi-plus-circle"></i></div>
 								</div>
-								<button type="button" id="send-button-clear" class="btn btn-sm btn-danger rounded-0 disabled" aria-label="Clear Input"><i class="bi bi-trash3-fill"></i></button>
-								<button type="button" id="send-button-send" class="btn btn-sm btn-success rounded-0 rounded-end disabled" aria-label="Send Message"><i class="bi bi-send-check-fill"></i></button>
+								<button type="button" id="send-button-clear" class="btn btn-sm btn-danger rounded-0" disabled aria-label="Clear Input"><i class="bi bi-trash3-fill"></i></button>
+								<button type="button" id="send-button-send" class="btn btn-sm btn-success rounded-0 rounded-end" disabled aria-label="Send Message"><i class="bi bi-send-check-fill"></i></button>
 							</div>
 							<div id="osc-status" class="my-2 d-flex flex-row">
-								<div class="user-select-none p-1 shadow border border-black rounded-start small" data-i18n-string>Connection Status</div>
+								<div class="user-select-none p-1 shadow border border-black rounded-start small">Connection Status</div>
 								<div class="user-select-none p-1 shadow border border-black rounded-end d-flex flex-wrap flex-row justify-content-evenly flex-grow-1" id="osc-connection-container"></div>
 							</div>
 						</div>
@@ -102,81 +88,140 @@
 					<!-- CONNECTION PAGE -->
 					<div class="d-none h-100 mt-2 page-tab-pane" id="connect-tab-pane">
 						<div class="d-flex align-items-start h-100 pb-2">
-							<div class="nav flex-column flex-shrink-0 nav-pills me-3 pe-2 border-end border-secondary h-100" id="connect-pills" role="tablist" aria-orientation="vertical">
-								<button class="nav-link active" id="connect-001-tab" data-bs-toggle="pill" data-bs-target="#connect-001" type="button" role="tab" data-i18n-string>Connection #1</button>
-								<button class="nav-link" id="connect-002-tab" data-bs-toggle="pill" data-bs-target="#connect-002" type="button" role="tab" data-i18n-string>Connection #2</button>
-								<button class="nav-link" id="connect-003-tab" data-bs-toggle="pill" data-bs-target="#connect-003" type="button" role="tab" data-i18n-string>Connection #3</button>
-								<button class="nav-link" id="connect-004-tab" data-bs-toggle="pill" data-bs-target="#connect-004" type="button" role="tab" data-i18n-string>Connection #4</button>
-								<button class="nav-link" id="connect-005-tab" data-bs-toggle="pill" data-bs-target="#connect-005" type="button" role="tab" data-i18n-string>Connection #5</button>
-								<button class="nav-link" id="connect-006-tab" data-bs-toggle="pill" data-bs-target="#connect-006" type="button" role="tab" data-i18n-string>Connection #6</button>
-								<button class="nav-link" id="connect-007-tab" data-bs-toggle="pill" data-bs-target="#connect-007" type="button" role="tab" data-i18n-string>Connection #7</button>
-								<button class="nav-link" id="connect-008-tab" data-bs-toggle="pill" data-bs-target="#connect-008" type="button" role="tab" data-i18n-string>Connection #8</button>
+							<div class="nav flex-column w-25 flex-shrink-0 nav-pills me-3 pe-2 border-end border-secondary h-100" id="connect-pills" role="tablist" aria-orientation="vertical">
+								<div id="connect-list" class="w-100"></div>
+								<button type="button" class="btn btn-success" id="connect-add-button"><i class="bi bi-plus-square"></i> Add Connection</button>
 							</div>
-							<div class="tab-content flex-grow-1 h-100" id="v-pills-tabContent">
-								<div class="tab-pane fade show active h-100" id="connect-001" role="tabpanel" tabindex="0"></div>
-								<div class="tab-pane h-100 fade" id="connect-002" role="tabpanel" tabindex="0"></div>
-								<div class="tab-pane h-100 fade" id="connect-003" role="tabpanel" tabindex="0"></div>
-								<div class="tab-pane h-100 fade" id="connect-004" role="tabpanel" tabindex="0"></div>
-								<div class="tab-pane h-100 fade" id="connect-005" role="tabpanel" tabindex="0"></div>
-								<div class="tab-pane h-100 fade" id="connect-006" role="tabpanel" tabindex="0"></div>
-								<div class="tab-pane h-100 fade" id="connect-007" role="tabpanel" tabindex="0"></div>
-								<div class="tab-pane h-100 fade" id="connect-008" role="tabpanel" tabindex="0"></div>
+							<div class="tab-content flex-grow-1 h-100 overflow-scroll" id="v-pills-tabContent">
+								<div class="tab-pane fade show active h-100 p-3" id="connect-tab" role="tabpanel" tabindex="0"><form id="connect-form" class="needs-validation was-validated" novalidate>
+									<div class="row mb-2">
+										<div class="col-4 align-content-center"><h5 class="align-content-center p-0 m-0">Connection #<span id="connect-number">0</span></h5></div>
+										<div class="col-8 text-end d-none" id="connect-actions">
+											<button type="submit" class="btn btn-success btn-sm" id="connect-save-btn"><i class="bi bi-save"></i> Save</button>
+											<button type="button" class="btn btn-primary btn-sm" id="connect-cancel-btn"><i class="bi bi-x-octagon"></i> Cancel</button>
+											<button type="button" class="btn btn-danger btn-sm" id="connect-delete-btn"><i class="bi bi-trash3-fill"></i> Delete</button>
+										</div>
+									</div>
+									<div class="connect-data-row d-none row mb-3">
+										<div class="col-4 p-1 border fw-bold align-content-center">Name</div>
+										<div class="col-8 p-1 border">
+											<input class="form-control-sm form-control w-100" pattern="[a-zA-Z0-9\-_]{1,30}" type="text" disabled id="connect-name">
+											<div class="invalid-feedback">Cannot be empty, A-Za-z0-9,-,_ only</div>
+										</div>
+										<div class="col-4 p-1 border fw-bold align-content-center">Type</div>
+										<div class="col-8 p-1 border">
+											<select class="form-select form-select-sm w-100" id="connect-type" disabled>
+												<option value="sender">send only</option>
+												<option value="listen">listen only</option>
+												<option value="both">send and listen</option>
+											</select>
+										</div>
+										<div class="col-4 p-1 border fw-bold align-content-center">Enabled</div>
+										<div class="col-8 p-1 border">
+											<select class="form-select form-select-sm w-100" id="connect-enabled" disabled>
+												<option value="1">yes</option>
+												<option value="0">no</option>
+											</select>
+										</div>
+									</div>
+									<div class="connect-data-row d-none row"><h5>Primary</h5></div>
+									<div class="connect-data-row d-none row mb-3">
+										<div class="col-3 p-1 border fw-bold align-content-center">Listen</div>
+										<div class="col-2 p-1 border text-center align-content-center">Address</div>
+										<div class="col-3 p-1 border text-end">
+											<select class="form-select form-select-sm w-100" id="connect-in-address" disabled>
+											</select>
+										</div>
+										<div class="col-2 p-1 border text-center align-content-center">Port</div>
+										<div class="col-2 p-1 border text-end">
+											<input class="form-control-sm form-control w-100" type="number" min="1024" max="65535" disabled id="connect-in-port">
+											<div class="invalid-feedback">1024-65535</div>
+										</div>
+										<div class="col-3 p-1 border fw-bold align-content-center">Send</div>
+										<div class="col-2 p-1 border text-center align-content-center">Address</div>
+										<div class="col-3 p-1 border text-end">
+											<input class="form-control-sm form-control w-100" type="text" pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" disabled id="connect-out-address">
+											<div class="invalid-feedback">Invalid IP</div>
+										</div>
+										<div class="col-2 p-1 border text-center align-content-center">Port</div>
+										<div class="col-2 p-1 border text-end">
+											<input class="form-control-sm form-control w-100" type="number" disabled id="connect-out-port">
+											<div class="invalid-feedback">1024-65535</div>
+										</div>
+									</div>
+
+									<div class="connect-data-row d-none row">
+										<h5>Forwarders</h5>
+										<p class="small pb-0 mb-1">All incoming traffic is immediately forwarded to these host:port combos, without modification.</p>
+									</div>
+									<div class="connect-data-row d-none row">
+										<div class="col-3 p-1 border text-center align-content-center">Address</div>
+										<div class="col-2 p-1 border text-center align-content-center">Port</div>
+										<div class="col-1 p-1 border text-center"><div class="d-none btn btn-sm btn-success" id="connect-add-fwd"><i class="bi bi-plus-square"></i></div></div>
+									</div>
+									<div class="connect-data-row d-none row" id="connect-forwarders"></div>
+
+									<div class="connect-data-row d-none row mt-3"><h5>Heartbeat</h5></div>
+									<div class="connect-data-row d-none row mb-3">
+										<div class="col-2 p-1 border text-center align-content-center">Enabled</div>
+										<div class="col-2 p-1 border text-center">
+											<select class="form-select form-select-sm w-100" id="connect-heart-enabled" disabled>
+												<option value="1">yes</option>
+												<option value="0">no</option>
+											</select>
+										</div>
+										<div class="col-2 p-1 border text-center align-content-center">OSC Address</div>
+										<div class="col-3 p-1 border text-end">
+											<input class="form-control-sm form-control w-100" type="text" pattern="[a-zA-Z0-9\-_\/]{1,100}" disabled id="connect-heart-address">
+										</div>
+										<div class="col-1 p-1 border text-center align-content-center">Time</div>
+										<div class="col-2 p-1 border text-end">
+											<input class="form-control-sm form-control w-100" type="number" min="1" max="100000" disabled id="connect-heart-interval">
+										</div>
+										<div class="col-2 p-1 border text-center align-content-center">OSC Arguments</div>
+										<div class="col-8 p-1 border align-content-center border-end-0" id="connect-heart-args">none</div>
+										<div class="col-2 text-center p-1 border border-start-0 align-content-center">
+											<div class="btn-group btn-group-sm w-100" id="connect-heart-actions">
+												<div class="btn btn-sm btn-success" id="connect-heart-add" title="Add Argument"><i class="bi bi-plus-square"></i></div>
+												<div class="btn btn-sm btn-danger" id="connect-heart-clear" title="Clear Arguments"><i class="bi bi-trash3-fill"></i></div>
+											</div>
+										</div>
+									</div>
+								</form></div>
 							</div>
 						</div>
 					</div>
-					<!-- SETTINGS PAGE -->
-					<div class="d-none h-100 mt-2 page-tab-pane" id="settings-tab-pane">
-						<div class="d-flex flex-column pb-3 h-100">
-							<div class="d-flex h-100 gx-3 user-select-none">
-								<div class="col-3 py-2 pe-1 d-flex flex-column justify-content-evenly align-items-center">
-									<div class="w-100">
-										<div class="h5 mb-0 text-center" data-i18n-string>Language</div>
-										<select class="form-select form-select-sm w-100 mt-1" id="langPicker">
-											<option value="en-US">English</option>
-										</select>
-										<!-- <div class="btn btn-sm btn-primary w-100 mt-1" id="singleButton">
-											<span id="singleMode_off"><i class="bi bi-list-ol float-start"></i> <span data-i18n-string>Display Mode : All</span></span>
-											<span id="singleMode_on" class="d-none"><i class="bi bi-list-task float-start"></i> <span data-i18n-string>Display Mode : Per Address</span></span>
-										</div> -->
-									</div>
-									<div class="w-100 d-none" id="debug-options">
-										<div class="h5 mb-0 text-center" data-i18n-string>Development</div>
-										<div class="btn btn-sm btn-primary w-100 mt-1" id="debugDumpTranslations" data-i18n-string>Save Translation Memory</div>
-									</div>
-								</div>
-								<div class="ps-2 col-9 d-flex flex-column">
-									<div class="my-2 p-1 h-100 shadow border border-black" id="log-data-container"></div>
-								</div>
-							</div>
-						</div>
+					<!-- LOG PAGE -->
+					<div class="d-none h-100 d-flex flex-column page-tab-pane" id="log-tab-pane">
+						<div class="my-2 p-1 h-100 shadow border border-black overflow-scroll" id="log-container"></div>
 					</div>
 					<!-- HELP PAGE -->
 					<div class="d-none h-100 mt-2 page-tab-pane" id="help-tab-pane">
 						<div class="row mt-3">
-							<div class="col-12 mb-3 text-center" data-i18n-string>OSC Supports in a near unlimited amount of data types.  OSCProxySpy understands the following:</div>
+							<div class="col-12 mb-3 text-center">OSC Supports in a near unlimited amount of data types.  OSCProxySpy understands the following:</div>
 							<div class="col-6">
-								<div class="h5 text-center" data-i18n-string>OSC Standard Data Types</div>
+								<div class="h5 text-center">OSC Standard Data Types</div>
 								<ul class="list-group text-end">
-									<li class="list-group-item"><div class="osc-address float-start">address</div> <span data-i18n-string>The address for the message</span></li>
-									<li class="list-group-item"><div class="osc-string float-start">string</div> <span data-i18n-string>Character string data</span></li>
-									<li class="list-group-item"><div class="osc-integer float-start">integer</div> <span data-i18n-string>32-bit signed Integer</span></li>
-									<li class="list-group-item"><div class="osc-float float-start">float</div> <span data-i18n-string>32-bit signed floating point number</span></li>
-									<li class="list-group-item"><div class="osc-blob float-start">blob</div> <span data-i18n-string>Binary buffer data</span></li>
-									<li class="list-group-item"><div class="osc-timetag float-start">time tag</div> <span data-i18n-string>Date type with extended precision</span></li>
+									<li class="list-group-item"><div class="osc-address float-start">address</div> <span>The address for the message</span></li>
+									<li class="list-group-item"><div class="osc-arg-string float-start">string</div> <span>Character string data</span></li>
+									<li class="list-group-item"><div class="osc-arg-integer float-start">integer</div> <span>32-bit signed Integer</span></li>
+									<li class="list-group-item"><div class="osc-arg-float float-start">float</div> <span>32-bit signed floating point number</span></li>
+									<li class="list-group-item"><div class="osc-arg-blob float-start">blob</div> <span>Binary buffer data</span></li>
+									<li class="list-group-item"><div class="osc-timetag float-start">time tag</div> <span>Date type with extended precision</span></li>
 								</ul>
 							</div>
 							<div class="col-6">
-								<div class="h5 text-center" data-i18n-string>OSC Extended Data Types</div>
+								<div class="h5 text-center">OSC Extended Data Types</div>
 								<ul class="list-group text-end">
-									<li class="list-group-item"><div class="osc-char float-start">char</div> <span data-i18n-string>Single ASCII character (code point 0-127 only)</span></li>
-									<li class="list-group-item"><div class="osc-integer64 float-start">integer</div> <span data-i18n-string>64-bit signed Integer</span></li>
-									<li class="list-group-item"><div class="osc-float64 float-start">float</div> <span data-i18n-string>64-bit signed floating point number</span></li>
-									<li class="list-group-item"><div class="osc-null float-start">T/F/N/I</div> <span data-i18n-string>True, False, Null or Infinity (Bang) types</span></li>
-									<li class="list-group-item"><div class="osc-color float-start" style="background-color: rgba(129, 16, 54, 1)">color</div> <span data-i18n-string>32-bit RGBa Value (shown in color value)</span></li>
+									<li class="list-group-item"><div class="osc-arg-char float-start">char</div> <span>Single ASCII character (code point 0-127 only)</span></li>
+									<li class="list-group-item"><div class="osc-arg-integer64 float-start">integer</div> <span>64-bit signed Integer</span></li>
+									<li class="list-group-item"><div class="osc-arg-float64 float-start">float</div> <span>64-bit signed floating point number</span></li>
+									<li class="list-group-item"><div class="osc-arg-null float-start">T/F/N/I</div> <span>True, False, Null or Infinity (Bang) types</span></li>
+									<!-- <li class="list-group-item"><div class="osc-color float-start" style="background-color: rgba(129, 16, 54, 1)">color</div> <span>32-bit RGBa Value (shown in color value)</span></li> -->
 								</ul>
 							</div>
-							<div class="col-12 mt-3 text-center"><div class="osc-bundle-stamp-good">b</div> <div class="osc-bundle-stamp-bad">b</div> <span data-i18n-string>precedes messages that were received as part of a bundle.  The color indicates if the time tag was valid or not.</span></div>
-							<div class="col-12 mt-3 text-center"><strong data-i18n-string>NOTE:</strong><span data-i18n-string>OSC Proxy Spy is a live data viewer - all filtering options take effect on new data as it is received. Data received prior to setting a filter will not be altered.  Likewise, data that does not satisfy the filter is not kept to be reprocessed when the filter settings change.</span></div>
+							<div class="col-12 mt-3 text-center"><div class="osc-bundle-stamp-good">b</div> <div class="osc-bundle-stamp-bad">b</div> <span>precedes messages that were received as part of a bundle.  The color indicates if the time tag was valid or not.</span></div>
+							<div class="col-12 mt-3 text-center"><strong>NOTE:</strong><span> OSC Proxy Spy is a live data viewer - all filtering options take effect on new data as it is received. Data received prior to setting a filter will not be altered.  Likewise, data that does not satisfy the filter is not kept to be reprocessed when the filter settings change.</span></div>
 						</div>
 					</div>
 				</div>
@@ -188,12 +233,12 @@
 			<div class="modal-dialog modal-dialog-centered">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h1 class="modal-title fs-5" data-i18n-string>Add OSC Argument</h1>
+						<h1 class="modal-title fs-5">Add OSC Argument</h1>
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
 					<div class="modal-body">
 						<div class="row gy-2">
-							<div class="col-3" data-i18n-string>Data Type</div>
+							<div class="col-3">Data Type</div>
 							<div class="col-9">
 								<select class="form-select form-select-sm" id="arg-add-type">
 									<option value="0" selected> -- </option>
@@ -204,7 +249,7 @@
 									<option value="double">Float64</option>
 								</select>
 							</div>
-							<div class="col-3" data-i18n-string>Value</div>
+							<div class="col-3">Value</div>
 							<div class="col-9">
 								<input type="text" id="arg-add-value" class="form-control form-control-sm w-100">
 							</div>
@@ -212,92 +257,47 @@
 						<input type="hidden" id="arg-add-destination" value="0">
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n-string>Cancel</button>
-						<button id="arg-add-process" type="button" class="btn btn-primary" data-i18n-string>Add</button>
+						<button id="arg-add-cancel" type="button" class="btn btn-secondary">Cancel</button>
+						<button id="arg-add-process" type="button" class="btn btn-primary">Add</button>
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<!-- Connection Setting Template -->
-		<template id="connection-template">
-			<form method="post" id="connect-000-form" class="h-100 form-control-sm">
-				<div class="row h-100 align-items-center">
-					<div class="col-3"><label data-i18n-string>Connection Name</label></div>
-					<div class="col-1"><div class="form-check form-switch">
-						<input id="connect-000-active" name="connect-000-active" class="form-check-input" type="checkbox" role="switch">
-					</div></div>
-					<div class="col-8"><input id="connect-000-name" name="connect-000-name" pattern="[A-Za-z0-9\-]+" title="a-z, A-Z, 0-9, '-'" type="text" class="form-control form-control-sm  w-100"></div>
-
-					<div class="col-2"><label data-i18n-string>Listener</label></div>
-					<div class="col-1"><label data-i18n-string>Port</label></div>
-					<div class="col-2"><input id="connect-000-in-port" name="connect-000-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-					<div class="col-2"><label data-i18n-string>Address</label></div>
-					<div class="col-5"><select id="connect-000-in-address" name="connect-000-in-address" class="form-select form-select-sm network-drop"></select></div>
-
-					<div class="col-2"><label data-i18n-string>Sender</label></div>
-					<div class="col-1"><label data-i18n-string>Port</label></div>
-					<div class="col-2"><input id="connect-000-out-port" name="connect-000-out-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-					<div class="col-2"><label data-i18n-string>Address</label></div>
-					<div class="col-5"><input id="connect-000-out-address" name="connect-000-out-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-					<div class="col-11"><label data-i18n-string>Use shared socket (Listener port and Sender port need to be identical)</label></div>
-					<div class="col-1"><div class="form-check form-switch">
-						<input id="connect-000-shared-socket" name="connect-000-shared-socket" class="form-check-input" type="checkbox" role="switch">
-					</div></div>
-
-					<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Output</span><br>
-					<span class="text-muted fst-italic small" data-i18n-string>OSC Messages received on "Listener" will be sent to these hosts/ports</span></div>
-
-					<div class="col-2"><label data-i18n-string>Proxy #1</label></div>
-					<div class="col-1"><label data-i18n-string>Port</label></div>
-					<div class="col-2"><input id="connect-000-proxy-001-port" name="connect-000-proxy-001-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-					<div class="col-2"><label data-i18n-string>Address</label></div>
-					<div class="col-5"><input id="connect-000-proxy-001-address" name="connect-000-proxy-001-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-					<div class="col-2"><label data-i18n-string>Proxy #2</label></div>
-					<div class="col-1"><label data-i18n-string>Port</label></div>
-					<div class="col-2"><input id="connect-000-proxy-002-port" name="connect-000-proxy-002-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-					<div class="col-2"><label data-i18n-string>Address</label></div>
-					<div class="col-5"><input id="connect-000-proxy-002-address" name="connect-000-proxy-002-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-					<div class="col-2"><label data-i18n-string>Proxy #3</label></div>
-					<div class="col-1"><label data-i18n-string>Port</label></div>
-					<div class="col-2"><input id="connect-000-proxy-003-port" name="connect-000-proxy-003-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-					<div class="col-2"><label data-i18n-string>Address</label></div>
-					<div class="col-5"><input id="connect-000-proxy-003-address" name="connect-000-proxy-003-address" title="valid IP address" type="text" pattern="((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}" class="form-control-sm form-control w-100"></div>
-
-					<div class="col-12 text-center border-top"><span data-i18n-string>Proxy Input</span><br>
-					<span class="text-muted fst-italic small" data-i18n-string>Additionally listen on this port, messages received will be sent to "Sender"</span></div>
-
-					<div class="col-2"><label data-i18n-string>Proxy In</label></div>
-					<div class="col-1"><label data-i18n-string>Port</label></div>
-					<div class="col-2"><input id="connect-000-proxy-in-port" name="connect-000-proxy-in-port" min="1024" max="65535" title="1024-65535" type="number" class="form-control-sm form-control w-100"></div>
-					<div class="col-2"><label data-i18n-string>Address</label></div>
-					<div class="col-5"><select id="connect-000-proxy-in-address" name="connect-000-proxy-in-address" class="form-select form-select-sm network-drop"></select></div>
-
-					<div class="col-12 text-center border-top"><span data-i18n-string>Heartbeat Message</span><br>
-					<span class="text-muted fst-italic small" data-i18n-string>Send this OSC Message every set number of seconds</span></div>
-
-					<div class="col-2"><label data-i18n-string>Time (sec)</label></div>
-					<div class="col-2"><input id="connect-000-heartbeat-time" name="connect-000-heartbeat-time" min="1" max="600" title="1 - 600" type="number" class="form-control-sm form-control w-100"></div>
-					<div class="col-2"><label data-i18n-string>Message</label></div>
-					<div class="col-6 d-flex">
-						<input type="text" class="form-control form-control-sm w-50 rounded-0 rounded-start  send-input" placeholder="/address" id="connect-000-heartbeat-address" name="connect-000-heartbeat-address">
-						<div class="p-1 shadow border border-start-0 rounded-0 rounded-end flex-grow-1 d-flex flex-wrap flex-row justify-content-start osc-send-container">
-							<div id="connect-000-args" class="d-flex flex-wrap flex-row justify-content-start"></div>
-							<div class="osc-add" id="connect-000-button-add"><i class="bi bi-plus-circle"></i></div>
+		<!-- OSC Argument Modal - Heartbeat -->
+		<div class="modal fade" id="connect-add-modal" tabindex="-1">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h1 class="modal-title fs-5">Add OSC Argument</h1>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<div class="row gy-2">
+							<div class="col-3">Data Type</div>
+							<div class="col-9">
+								<select class="form-select form-select-sm" id="connect-add-type">
+									<option value="0" selected> -- </option>
+									<option value="string">String</option>
+									<option value="integer">Int32</option>
+									<option value="float">Float32</option>
+									<option value="bigint">Int64</option>
+									<option value="double">Float64</option>
+								</select>
+							</div>
+							<div class="col-3">Value</div>
+							<div class="col-9">
+								<input type="text" id="connect-add-value" class="form-control form-control-sm w-100">
+							</div>
 						</div>
 					</div>
-
-					<div class="col-12 pt-1 border-top">
-						<div class="btn-group btn-group-sm w-100">
-							<button type="submit" class="btn-sm w-75 mx-auto d-block btn btn-success"><span data-i18n-string>Save Connection</span></button>
-							<button type="button" id="connect-000-clear" class="btn-sm w-25 mx-auto d-block btn btn-danger"><span data-i18n-string>Delete Connection</span></button>
-						</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+						<button id="connect-add-process" type="button" class="btn btn-primary">Add</button>
 					</div>
 				</div>
-			</form>
-		</template>
+			</div>
+		</div>
+
 	</body>
 </html>

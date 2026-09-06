@@ -6,14 +6,16 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { FuseV1Options, FuseVersion } from '@electron/fuses'
 
 const config : ForgeConfig = {
-	packagerConfig : {
-		asar : true,
-	},
-	rebuildConfig : {},
 	makers        : [
 		new MakerSquirrel( {} ),
 		new MakerZIP( {}, ['darwin'] ),
 	],
+	packagerConfig : {
+		appCategoryType : 'public.app-category.developer-tools',
+		asar            : true,
+		icon            : 'icon/icon',
+		name            : 'TheaterTime',
+	},
 	plugins : [
 		new VitePlugin( {
 			// `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
@@ -50,6 +52,7 @@ const config : ForgeConfig = {
 			[FuseV1Options.OnlyLoadAppFromAsar]                   : true,
 		} ),
 	],
+	rebuildConfig : {},
 }
 
 export default config

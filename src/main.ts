@@ -1,10 +1,11 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron'
 import path from 'node:path'
+import os from 'node:os'
 import started from 'electron-squirrel-startup'
 import * as packJSON from '../package.json' with { type : 'json' }
 import { MainLogger } from './lib/logger'
 import { Settings } from './lib/settings'
-import { UDPListenEvent, UDPListenFreqEvent } from './lib/connection'
+import { ConnectionDef, UDPListenEvent, UDPListenFreqEvent } from './lib/connection'
 
 const debug = !app.isPackaged && true
 
@@ -51,6 +52,11 @@ app.on( 'ready', () => {
 	ipcMain.handle( 'log:all', () => log.all )
 	ipcMain.handle( 'log:new', () => log.last )
 
+	ipcMain.handle( 'connect:networks', () => getNetworkInterfaces() )
+
+	ipcMain.handle( 'connect:remove', ( _, index ) => settings.removeConnect( index ) )
+	ipcMain.handle( 'connect:save', ( _, index : number, data : ConnectionDef ) => settings.replaceOrAdd( index, data ) )
+	ipcMain.handle( 'connect:send', () => settings.sendMessage() )
 	ipcMain.handle( 'settings:get', () => settings.save() )
 	ipcMain.handle( 'settings:save', ( _, key : string, value ) => {
 		switch ( key ) {
@@ -65,6 +71,15 @@ app.on( 'ready', () => {
 				break
 			case 'modeAll' :
 				settings.modeAll = value
+				break
+			case 'sendAddress' :
+				settings.sendAddress = value
+				break
+			case 'sendArgs' :
+				settings.sendArgs = value
+				break
+			case 'sendConnect' :
+				settings.sendConnect = value
 				break
 			default :
 				break
@@ -202,3 +217,20 @@ if ( debug ) {
 
 const menu = Menu.buildFromTemplate( mainMenu )
 Menu.setApplicationMenu( menu )
+
+
+function getNetworkInterfaces() {
+	const validNetworks = new Set( ['0.0.0.0'] )
+
+	for ( const iface of Object.values( os.networkInterfaces() ) ) {
+		if ( typeof iface !== 'undefined' ) {
+			for ( const address of iface ) {
+				if ( address.family === 'IPv4' ) {
+					validNetworks.add( address.address )
+				}
+			}
+		}
+	}
+
+	return [...validNetworks].sort()
+}

@@ -8,7 +8,7 @@
 
 import { app }          from 'electron'
 import { MainLogger }   from './logger'
-import { OSCArgObject } from 'simple-osc-lib'
+import { OSCArgObject, OSCMessage } from 'simple-osc-lib'
 import * as Connect     from './connection'
 import EventEmitter     from 'node:events'
 import fs               from 'node:fs'
@@ -21,6 +21,9 @@ export type SettingsDef = {
 	excludeType       : Array<OSCArgObject['type'] | 'other'>
 	matchTerm         : string | null
 	modeAll           : boolean
+	sendAddress       : string | null
+	sendArgs          : Array<OSCArgObject>
+	sendConnect       : number | null
 }
 
 const SettingsDefault : SettingsDef = {
@@ -29,6 +32,9 @@ const SettingsDefault : SettingsDef = {
 	excludeType       : [],
 	matchTerm         : null,
 	modeAll           : true,
+	sendAddress       : null,
+	sendArgs          : [],
+	sendConnect       : null,
 }
 
 
@@ -40,6 +46,9 @@ export class Settings extends EventEmitter {
 	#log                 : MainLogger
 	#matchTerm           : string | null = null
 	#modeAll           ! : boolean
+	#sendAddress       ! : string | null
+	#sendArgs          ! : Array<OSCArgObject>
+	#sendConnect       ! : number | null
 
 	get displayOptions() {
 		return {
@@ -47,6 +56,9 @@ export class Settings extends EventEmitter {
 			excludeType       : this.#excludeType,
 			matchTerm         : this.#matchTerm,
 			modeAll           : this.#modeAll,
+			sendAddress       : this.#sendAddress,
+			sendArgs          : this.#sendArgs,
+			sendConnect       : this.#sendConnect,
 		}
 	}
 
@@ -54,6 +66,9 @@ export class Settings extends EventEmitter {
 	set excludeType( v : OSCArgObject['type'][] ) { this.#excludeType = v; this.saveToDisk() }
 	set modeAll( v : boolean )                    { this.#modeAll = v; this.saveToDisk() }
 	set matchTerm( v : string )                   { this.#matchTerm = v; this.saveToDisk() }
+	set sendAddress( v : string | null )          { this.#sendAddress = v; this.saveToDisk() }
+	set sendArgs( v : Array<OSCArgObject> )       { this.#sendArgs = v; this.saveToDisk() }
+	set sendConnect( v : number | null )          { this.#sendConnect = v; this.saveToDisk() }
 
 	constructor( l : MainLogger ) {
 		super()
@@ -71,10 +86,56 @@ export class Settings extends EventEmitter {
 		this.saveToDisk()
 	}
 
+	sendMessage() {
+		if ( this.#sendConnect === null ) {
+			this.#log.info( 'Unable to send OSC Message :: No or Invalid Connection Specified' )
+			return false
+		}
+		if ( this.#sendAddress === null ) {
+			this.#log.info( 'Unable to send OSC Message :: OSC Address required' )
+			return false
+		}
+
+		const thisCon = this.#connections[this.#sendConnect]
+
+		if (
+			typeof thisCon !== 'undefined' && (
+				thisCon.connectionPrime.isSender() ||
+				thisCon.connectionPrime.isBoth()
+			)
+		) {
+			try {
+				const oscMessage = new OSCMessage( this.#sendAddress, this.#sendArgs )
+				thisCon.connectionPrime.send( oscMessage.buffer )
+				this.#log.info( `Sent OSC Message :: ${oscMessage.debug}` )
+				const thisEmitMsg : Connect.UDPListenEvent = {
+					address    : thisCon.connectionPrime.sendAddress,
+					bundleTime : false,
+					message    : oscMessage.toJSON(),
+					name       : `${thisCon.name}-SEND`,
+					port       : thisCon.connectionPrime.sendPort,
+					timestamp  : ( new Date() ).getTime(),
+				}
+				this.emit( 'message', thisEmitMsg )
+				
+				return true
+			} catch( err ) {
+				if ( err instanceof Error ) {
+					this.#log.info( `Unable to send OSC Message :: ${err}` )
+				} else {
+					this.#log.info( 'Unable to send OSC Message :: Unexpected Error' )
+				}
+				return false
+			}
+		}
+		this.#log.info( 'Unable to send OSC Message :: No or Invalid Connection Specified' )
+		return false
+	}
+
 	getFreq() {
 		const results : Connect.UDPListenFreqEvent[] = []
 		for ( const con of this.#connections ) {
-			if ( con.connectionPrime.isListener() ) {
+			if ( con.connectionPrime.isListener() || con.connectionPrime.isBoth() ) {
 				results.push( {
 					average : con.connectionPrime.frequency,
 					ever    : con.connectionPrime.sinceEver,
@@ -129,25 +190,34 @@ export class Settings extends EventEmitter {
 		this.emit( 'message', v )
 	}
 
-	addConnect( v : Connect.ConnectionDef ) {
+	addConnect( v : Connect.ConnectionDef ) : SettingsDef {
 		const connection = new Connect.Connection( v, this.#log )
 		this.#connections.push( connection )
 		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
 		this.saveToDisk()
+		return this.save()
 	}
 
-	replaceConnect( i : number, v : Connect.ConnectionDef ) {
+	replaceOrAdd( i : number, v : Connect.ConnectionDef ) : SettingsDef {
+		return ( typeof this.#connections[i] !== 'undefined' ) ?
+			this.replaceConnect( i, v ) :
+			this.addConnect( v )
+	}
+
+	replaceConnect( i : number, v : Connect.ConnectionDef ) : SettingsDef {
 		this.#connections[i].close()
 		const connection = new Connect.Connection( v, this.#log )
 		this.#connections[i] = connection
 		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
 		this.saveToDisk()
+		return this.save()
 	}
 
 	removeConnect( i : number ) {
 		this.#connections[i].close()
 		this.#connections.splice( i, 1 )
 		this.saveToDisk()
+		return this.save()
 	}
 
 	load( v : Partial<SettingsDef> ) {
@@ -163,6 +233,9 @@ export class Settings extends EventEmitter {
 		this.#excludeType       = mergedDefault.excludeType
 		this.#matchTerm         = mergedDefault.matchTerm
 		this.#modeAll           = mergedDefault.modeAll
+		this.#sendAddress       = mergedDefault.sendAddress
+		this.#sendArgs          = mergedDefault.sendArgs
+		this.#sendConnect       = mergedDefault.sendConnect
 	}
 
 	save() : SettingsDef {
@@ -172,6 +245,9 @@ export class Settings extends EventEmitter {
 			excludeType       : this.#excludeType,
 			matchTerm         : this.#matchTerm,
 			modeAll           : this.#modeAll,
+			sendAddress       : this.#sendAddress,
+			sendArgs          : this.#sendArgs,
+			sendConnect       : this.#sendConnect,
 		}
 	}
 

@@ -1,12 +1,19 @@
-import js from '@eslint/js'
-import babelParser from '@babel/eslint-parser'
+// @ts-check
+
+import { defineConfig, globalIgnores } from 'eslint/config'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
+import js from '@eslint/js'
+import stylistic from '@stylistic/eslint-plugin'
+import tseslint from 'typescript-eslint'
 
-export default [
-	js.configs.recommended,
+export default defineConfig( [
+	globalIgnores( ['dist/*', 'coverage/*'] ),
 	{
-		files : ['**/*.js'],
+		files : ['**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}'],
+
+		extends : [js.configs.recommended, tseslint.configs.recommended],
+
 		languageOptions : {
 			ecmaVersion : 2022,
 			
@@ -14,20 +21,49 @@ export default [
 				...globals.browser,
 				...globals.node,
 				...globals.es2021,
-				...globals.jest,
 			},
-			parser      : babelParser,
 			parserOptions : {
 				requireConfigFile : false,
 			},
 			sourceType  : 'module',
 		},
 		plugins : {
-			unicorn : eslintPluginUnicorn,
+			unicorn      : eslintPluginUnicorn,
+			'@stylistic' : stylistic,
 		},
 		rules : {
-			'no-shadow'    : [ 'error', { 'builtinGlobals': true }],
-			'comma-dangle' : [
+			'no-unused-vars' : 'off',
+
+			'@typescript-eslint/no-unused-vars' : ['error', {
+				'argsIgnorePattern' : '^_',
+			}],
+
+			'@stylistic/type-annotation-spacing' : ['error', {
+				'after'     : true,
+				'before'    : true,
+				'overrides' : {
+					'questionMark'        : { 'before' : true, 'after' : true },
+				},
+			}],
+
+			'@stylistic/curly-newline' : ['error', {
+				'ArrowFunctionExpression' : { 'multiline' : true },
+				'ClassBody'               : 'always',
+				'ForInStatement'          : 'always',
+				'ForOfStatement'          : { 'multiline' : true },
+				'ForStatement'            : 'always',
+				'FunctionDeclaration'     : { 'multiline' : true },
+				'FunctionExpression'      : { 'multiline' : true },
+				'IfStatementAlternative'  : 'always',
+				'IfStatementConsequent'   : 'always',
+				'SwitchCase'              : { 'multiline' : true },
+				'SwitchStatement'         : 'always',
+				'TryStatementBlock'       : 'always',
+				'TryStatementHandler'     : 'always',
+				'WhileStatement'          : { 'multiline' : true, 'minElements' : 3, 'consistent' : true },
+			}],
+
+			'@stylistic/comma-dangle' : [
 				'error',
 				{
 					'arrays'    : 'only-multiline',
@@ -37,45 +73,54 @@ export default [
 					'objects'   : 'always-multiline',
 				}
 			],
-			'indent' : [
-				'error',
+			'@stylistic/indent' : [
+				'warn',
 				'tab',
-				{
-					'SwitchCase' : 1,
-				},
+				{ 'SwitchCase' : 1 },
 			],
-			'key-spacing' : [
+			'@stylistic/key-spacing' : [
 				'error',
 				{
 					'afterColon'  : true,
+					'align'       : 'colon',
 					'beforeColon' : true,
 					'mode'        : 'minimum',
 				},
 			],
-			'no-trailing-spaces' : [
+			'@stylistic/lines-between-class-members' : [
+				'error',
+				{
+					enforce : [
+						{ blankLine : 'never', prev : '*', next : 'field' },
+						{ blankLine : 'never', prev : 'field', next : '*' },
+						{ blankLine : 'always', prev : 'method', next : '*' },
+						{ blankLine : 'always', prev : '*', next : 'method' },
+					],
+				},
+				{ exceptAfterSingleLine : true }
+			],
+			'@stylistic/no-trailing-spaces' : [
 				'error',
 				{
 					'ignoreComments' : true,
 					'skipBlankLines' : true,
 				},
 			],
-			'no-unused-vars' : [
-				'error',
+			'sort-keys' : [
+				'warn',
+				'asc',
 				{
-					'args' : 'all',
-					'argsIgnorePattern' : '^_',
-					'varsIgnorePattern' : '^_|^client',
-				},
+					'allowLineSeparatedGroups' : true,
+					'caseSensitive'            : false,
+					'minKeys'                  : 4,
+					'natural'                  : true,
+				}
 			],
-	
-			'array-bracket-spacing'           : ['error', 'never'],
-			'arrow-parens'                    : 'error',
-			'comma-spacing'                   : 'error',
+
+			'complexity'                      : ['warn', 30],
 			'default-case'                    : 'error',
 			'dot-notation'                    : 'error',
 			'eqeqeq'                          : 'error',
-			'func-call-spacing'               : 'error',
-			'keyword-spacing'                 : 'error',
 			'no-await-in-loop'                : 'error',
 			'no-console'                      : 'warn',
 			'no-duplicate-imports'            : 'error',
@@ -87,8 +132,8 @@ export default [
 			'no-multi-str'                    : 'error',
 			'no-param-reassign'               : 'error',
 			'no-promise-executor-return'      : 'error',
-			'no-return-await'                 : 'error',
 			'no-sequences'                    : 'error',
+			'no-shadow'                       : ['error', { 'builtinGlobals' : true }],
 			'no-template-curly-in-string'     : 'error',
 			'no-throw-literal'                : 'error',
 			'no-unneeded-ternary'             : 'error',
@@ -101,17 +146,26 @@ export default [
 			'prefer-arrow-callback'           : 'error',
 			'prefer-const'                    : 'error',
 			'prefer-template'                 : 'error',
-			'quotes'                          : ['error', 'single'],
 			'require-atomic-updates'          : 'error',
-			'semi'                            : ['error', 'never'],
-	
-			'complexity'                      : ['warn', 30],
-			'sort-keys'                       : ['warn', 'asc', {'allowLineSeparatedGroups' : true, 'caseSensitive' : false, 'minKeys' : 4, 'natural' : true}],
-	
-			'unicorn/better-regex'                     : 'error',
+			
+			'@stylistic/array-bracket-spacing'          : ['error', 'never'],
+			'@stylistic/arrow-parens'                   : 'error',
+			'@stylistic/brace-style'                    : ['error', '1tbs', { 'allowSingleLine' : true }],
+			'@stylistic/comma-spacing'                  : 'error',
+			'@stylistic/computed-property-spacing'      : ['error', 'never'],
+			'@stylistic/function-call-argument-newline' : ['error', 'consistent'],
+			'@stylistic/function-call-spacing'          : 'error',
+			'@stylistic/keyword-spacing'                : 'error',
+			'@stylistic/newline-per-chained-call'       : ['error', { 'ignoreChainWithDepth' : 2 }],
+			'@stylistic/quotes'                         : ['error', 'single'],
+			'@stylistic/semi'                           : ['error', 'never'],
+			'@stylistic/space-before-function-paren'    : ['error', 'never'],
+			'@stylistic/space-in-parens'                : ['error', 'always'],
+
 			'unicorn/catch-error-name'                 : ['error', { 'name' : 'err' }],
 			'unicorn/consistent-destructuring'         : 'error',
 			'unicorn/consistent-function-scoping'      : 'error',
+			'unicorn/consistent-json-file-read'        : 'error',
 			'unicorn/empty-brace-spaces'               : 'error',
 			'unicorn/error-message'                    : 'error',
 			'unicorn/escape-case'                      : 'error',
@@ -119,9 +173,7 @@ export default [
 			'unicorn/new-for-builtins'                 : 'error',
 			'unicorn/no-abusive-eslint-disable'        : 'error',
 			'unicorn/no-array-callback-reference'      : 'error',
-			'unicorn/no-array-for-each'                : 'error',
 			'unicorn/no-array-method-this-argument'    : 'error',
-			'unicorn/no-array-push-push'               : 'error',
 			'unicorn/no-for-loop'                      : 'error',
 			'unicorn/no-lonely-if'                     : 'error',
 			'unicorn/no-this-assignment'               : 'error',
@@ -131,13 +183,13 @@ export default [
 			'unicorn/no-useless-spread'                : 'error',
 			'unicorn/no-useless-switch-case'           : 'error',
 			'unicorn/prefer-array-some'                : 'error',
-			'unicorn/prefer-json-parse-buffer'         : 'error',
 			'unicorn/prefer-native-coercion-functions' : 'error',
 			'unicorn/prefer-node-protocol'             : 'error',
 			'unicorn/prefer-set-has'                   : 'error',
+			'unicorn/prefer-single-call'               : 'error',
 			'unicorn/prefer-spread'                    : 'error',
 			'unicorn/require-array-join-separator'     : 'error',
 			'unicorn/throw-new-error'                  : 'error',
 		},
 	}
-]
+] )
