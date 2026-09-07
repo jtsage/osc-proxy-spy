@@ -14,6 +14,7 @@ const ipc = {
 	getLogNew : () => ipcRenderer.invoke( 'log:new' ),
 
 	changeSetting : ( id : string, value : unknown ) => ipcRenderer.invoke( 'settings:save', id, value ),
+	discover      : () => ipcRenderer.invoke( 'connect:find' ),
 	doSend        : () => ipcRenderer.invoke( 'connect:send' ),
 	getSettings   : () => ipcRenderer.invoke( 'settings:get' ),
 	networks      : () => ipcRenderer.invoke( 'connect:networks' ),

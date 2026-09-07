@@ -1,11 +1,14 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron'
-import path from 'node:path'
-import os from 'node:os'
+import path    from 'node:path'
+import os      from 'node:os'
+import net     from 'node:net'
+import dns     from 'node:dns/promises'
 import started from 'electron-squirrel-startup'
 import * as packJSON from '../package.json' with { type : 'json' }
 import { MainLogger } from './lib/logger'
 import { Settings } from './lib/settings'
 import { ConnectionDef, UDPListenEvent, UDPListenFreqEvent } from './lib/connection'
+import Bonjour from 'bonjour-service'
 
 const debug = !app.isPackaged && true
 
@@ -14,8 +17,55 @@ if ( started ) {
 	app.quit()
 }
 
-const log      = new MainLogger()
-const settings = new Settings( log )
+export type FoundService = {
+	address   : string,
+	name      : string,
+	port      : number,
+	safe_name : string,
+	type      : string,
+}
+
+const log         = new MainLogger()
+const settings    = new Settings( log )
+const bonInstance = new Bonjour()
+const services : Record<string, FoundService> = {}
+
+const UDP_OSC_Service = bonInstance.find( { type : 'osc', protocol : 'udp' } )
+
+UDP_OSC_Service.on( 'up', async( service ) => {
+	let goodIP = ''
+
+	try {
+		const result = await dns.lookup( service.host, 4 )
+		goodIP = result.address
+	} catch( err ) {
+		if ( err instanceof Error ) {
+			log.info( `Discovered service lookup failed :: ${err.message}` )
+		}
+		if ( typeof service.addresses !== 'undefined' ) {
+			for ( const possible of service.addresses ) {
+				if ( net.isIPv4( possible ) ) {
+					goodIP = possible
+					break
+				}
+			}
+		}
+	}
+
+	services[service.fqdn] = {
+		address   : goodIP,
+		name      : service.name,
+		port      : service.port,
+		safe_name : service.name.replace( /[^A-Za-z0-9]/g, '-' ),
+		type      : service.type,
+	}
+} )
+
+UDP_OSC_Service.on( 'down', ( service ) => {
+	if ( typeof services[service.fqdn] !== 'undefined' ) {
+		delete services[service.fqdn]
+	}
+} )
 
 let mainWindow : BrowserWindow
 
@@ -57,6 +107,7 @@ app.on( 'ready', () => {
 	ipcMain.handle( 'connect:remove', ( _, index ) => settings.removeConnect( index ) )
 	ipcMain.handle( 'connect:save', ( _, index : number, data : ConnectionDef ) => settings.replaceOrAdd( index, data ) )
 	ipcMain.handle( 'connect:send', () => settings.sendMessage() )
+	ipcMain.handle( 'connect:find', () => services )
 	ipcMain.handle( 'settings:get', () => settings.save() )
 	ipcMain.handle( 'settings:save', ( _, key : string, value ) => {
 		switch ( key ) {

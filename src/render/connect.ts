@@ -10,6 +10,7 @@ import { SettingsDef } from 'src/lib/settings'
 import * as util from './util'
 import { ConnectionDef } from 'src/lib/connection'
 import * as bootstrap from 'bootstrap'
+import { FoundService } from 'src/main'
 
 
 function isIPv4( ip : string ) {
@@ -46,10 +47,43 @@ type conType = 'listen' | 'sender' | 'both'
 let currentEdit : currentEditDef = null
 let conSettings : SettingsDef
 let addModal    : bootstrap.Modal
+let discModal   : bootstrap.Modal
 
 // MARK: startup event binding
 export const connectStartUp = () => {
 	addModal = new bootstrap.Modal( '#connect-add-modal' )
+	discModal = new bootstrap.Modal( '#connect-discover' )
+
+	util.listenToId( 'connect-discover-button', 'click', () => {
+		window.ipc.discover().then( ( results : Record<string, FoundService> ) => {
+			util.setInnerHTML( 'connect-discover-modal-buttons', '' )
+			const discHTML = document.createElement( 'div' )
+			for ( const item of Object.values( results ) ) {
+				const thisButton = document.createElement( 'button' )
+				thisButton.classList.add( 'btn', 'btn-primary', 'mb-2', 'w-100' )
+				thisButton.innerHTML = `${item.name} <small class="fst-italic">${item.address}:${item.port}`
+				thisButton.addEventListener( 'click', () => {
+					const newConNumber = conSettings.connections.length
+					conSettings.connections[newConNumber] = {
+						...defaultNewCon,
+						connectionPrime : {
+							sendAddress : item.address,
+							sendPort    : item.port,
+							type        : 'sender',
+						},
+						enabled : true,
+						name    : item.safe_name,
+					}
+					parseConnections( conSettings )
+					editConnection( newConNumber )
+					discModal.hide()
+				} )
+				discHTML.append( thisButton )
+			}
+			util.safeAppend( 'connect-discover-modal-buttons', discHTML )
+			discModal.show()
+		} )
+	} )
 	
 	util.listenToId( 'connect-add-button', 'click', () => {
 		const newConNumber = conSettings.connections.length
