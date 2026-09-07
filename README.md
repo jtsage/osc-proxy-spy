@@ -48,7 +48,7 @@ Connection status is shown for listen and send+listen types. It is color coded g
 
 ![Connection Interface](sshot/setting.png)
 
-The "Add Connection" button lets you manually add a new connection.  The "Discover Connection" button polls the Bonjour/zeroconf MDNS entries to auto-populate send type OSC Connections (if found).
+The "Add Connection" button lets you manually add a new connection.  The "Discover Connection" button polls the Bonjour/zeroconf mDNS entries to auto-populate send type OSC Connections (if found).
 
 ### Overview
 

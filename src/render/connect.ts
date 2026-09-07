@@ -56,9 +56,11 @@ export const connectStartUp = () => {
 
 	util.listenToId( 'connect-discover-button', 'click', () => {
 		window.ipc.discover().then( ( results : Record<string, FoundService> ) => {
+			let foundOne = false
 			util.setInnerHTML( 'connect-discover-modal-buttons', '' )
 			const discHTML = document.createElement( 'div' )
 			for ( const item of Object.values( results ) ) {
+				foundOne = true
 				const thisButton = document.createElement( 'button' )
 				thisButton.classList.add( 'btn', 'btn-primary', 'mb-2', 'w-100' )
 				thisButton.innerHTML = `${item.name} <small class="fst-italic">${item.address}:${item.port}`
@@ -79,6 +81,9 @@ export const connectStartUp = () => {
 					discModal.hide()
 				} )
 				discHTML.append( thisButton )
+			}
+			if ( ! foundOne ) {
+				discHTML.innerHTML = '<div class="fst-italic w-100 text-center">No auto-discovered endpoints found</div>'
 			}
 			util.safeAppend( 'connect-discover-modal-buttons', discHTML )
 			discModal.show()
