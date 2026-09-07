@@ -81,4 +81,8 @@ The developer cannot afford to purchase a code signing certificate for this proj
 
 `xattr -r -d com.apple.quarantine /path/to/the/downloaded/app`
 
+## AI Disclosure
+
+AI was _not_ used in the development of this software package. Some AI assisted web searches may have been used.
+
 &copy; 2026 J.T.Sag
