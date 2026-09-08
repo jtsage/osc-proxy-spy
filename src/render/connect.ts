@@ -101,7 +101,12 @@ export const connectStartUp = () => {
 		e.preventDefault()
 		if ( saveOk() && currentEdit !== null ) {
 			window.ipc.saveCon( currentEdit.index, currentEdit.data ).then( ( results ) => {
-				conSettings = results
+				if ( results[0] === false ) {
+					util.badOperation()
+					saveOk( true )
+					return
+				}
+				conSettings = results[1]
 				editLockOut( false )
 				parseConnections( conSettings )
 				util.clearDisplay()
@@ -213,6 +218,15 @@ export const connectStartUp = () => {
 	util.listenToId( 'connect-type', 'change', () => {
 		if ( currentEdit !== null ) {
 			currentEdit.data.connectionPrime.type = util.getSafeSelectValue( 'connect-type', currentEdit.data.connectionPrime.type ) as conType
+			if ( currentEdit.data.connectionPrime.type === 'both' || currentEdit.data.connectionPrime.type === 'listen' ) {
+				currentEdit.data.connectionPrime.listenAddress = util.getSafeSelectValue( 'connect-in-address', '0.0.0.0' )
+				currentEdit.data.connectionPrime.listenPort = parseInt( util.getFormValue( 'connect-in-port' ) ?? '0' )
+			}
+			if ( currentEdit.data.connectionPrime.type === 'both' || currentEdit.data.connectionPrime.type === 'sender' ) {
+				currentEdit.data.connectionPrime.sendAddress = util.getSafeSelectValue( 'connect-out-address', '127.0.0.1' )
+				currentEdit.data.connectionPrime.sendPort = parseInt( util.getFormValue( 'connect-out-port' ) ?? '0' )
+			}
+
 			unprotectConnection( currentEdit.data.connectionPrime.type )
 			saveOk()
 		}

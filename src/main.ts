@@ -30,9 +30,13 @@ const settings    = new Settings( log )
 const bonInstance = new Bonjour()
 const services : Record<string, FoundService> = {}
 
-const UDP_OSC_Service = bonInstance.find( { type : 'osc', protocol : 'udp' } )
+const UDP_OSC_Service    = bonInstance.find()
+const UDP_Known_Services = new Set( ['osc', 'qlab', 'vor-osc'] )
 
 UDP_OSC_Service.on( 'up', async( service ) => {
+	if ( service.protocol === 'tcp' ) return
+	if ( ! UDP_Known_Services.has( service.type ) ) return
+
 	let goodIP = ''
 
 	try {
@@ -50,6 +54,9 @@ UDP_OSC_Service.on( 'up', async( service ) => {
 				}
 			}
 		}
+		if ( goodIP === '' && typeof service.referer?.address !== 'undefined' ) {
+			goodIP = service.referer.address
+		}
 	}
 
 	services[service.fqdn] = {
@@ -59,9 +66,11 @@ UDP_OSC_Service.on( 'up', async( service ) => {
 		safe_name : service.name.replace( /[^A-Za-z0-9]/g, '-' ),
 		type      : service.type,
 	}
+
 } )
 
 UDP_OSC_Service.on( 'down', ( service ) => {
+	if ( service.protocol === 'tcp' ) return
 	if ( typeof services[service.fqdn] !== 'undefined' ) {
 		delete services[service.fqdn]
 	}

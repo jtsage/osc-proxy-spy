@@ -198,10 +198,18 @@ export class Settings extends EventEmitter {
 		return this.save()
 	}
 
-	replaceOrAdd( i : number, v : Connect.ConnectionDef ) : SettingsDef {
-		return ( typeof this.#connections[i] !== 'undefined' ) ?
-			this.replaceConnect( i, v ) :
-			this.addConnect( v )
+	replaceOrAdd( i : number, v : Connect.ConnectionDef ) : [boolean, SettingsDef] {
+		try {
+			return [true, ( typeof this.#connections[i] !== 'undefined' ) ?
+				this.replaceConnect( i, v ) :
+				this.addConnect( v )
+			]
+		} catch( err ) {
+			if ( err instanceof Error ) {
+				this.#log.warn( `Unable to update connection record :: ${err.message}` )
+			}
+			return [false, this.save()]
+		}
 	}
 
 	replaceConnect( i : number, v : Connect.ConnectionDef ) : SettingsDef {
