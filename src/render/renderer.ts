@@ -252,17 +252,6 @@ const updateSettings = () => {
 			} )
 	}
 
-	const conSelectIdx = currentSettings.sendConnect === null ? -1 : currentSettings.connections.length > currentSettings.sendConnect ? currentSettings.sendConnect : -1
-	const conSelect    = [`<option value="-1" ${conSelectIdx === -1 ? 'selected' : ''}>n/a</option>`]
-
-	for ( const [index, con] of currentSettings.connections.entries() ) {
-		if ( con.connectionPrime.type !== 'listen' ) {
-			conSelect.push( `<option value="${index}" ${conSelectIdx === index ? 'selected' : ''}>${con.name}</option>` )
-		}
-	}
-
-	util.setInnerHTML( 'send-destination', conSelect.join( '' ) )
-
 	const conNames = [
 		...currentSettings.connections.filter( ( item ) => item.connectionPrime.type === 'listen' || item.connectionPrime.type === 'both' ).map( ( item ) => item.name )
 	]

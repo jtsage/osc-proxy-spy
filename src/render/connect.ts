@@ -323,6 +323,17 @@ export const parseConnections = ( v : SettingsDef ) => {
 	util.setInnerHTML( 'osc-connection-container', '' )
 	util.setInnerHTML( 'connect-list', '' )
 
+	const conSelectIdx = conSettings.sendConnect === null ? -1 : conSettings.connections.length > conSettings.sendConnect ? conSettings.sendConnect : -1
+	const conSelect    = [`<option value="-1" ${conSelectIdx === -1 ? 'selected' : ''}>n/a</option>`]
+
+	for ( const [index, con] of conSettings.connections.entries() ) {
+		if ( con.connectionPrime.type !== 'listen' ) {
+			conSelect.push( `<option value="${index}" ${conSelectIdx === index ? 'selected' : ''}>[${index}] ${con.name}</option>` )
+		}
+	}
+
+	util.setInnerHTML( 'send-destination', conSelect.join( '' ) )
+
 	for ( const [idx, item] of conSettings.connections.entries() ) {
 		const btnGroup = document.createElement( 'div' )
 		btnGroup.classList.add( 'btn-group', 'w-100', 'mb-1' )
