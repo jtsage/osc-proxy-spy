@@ -324,19 +324,19 @@ export const makeDropDownCheck = ( dropName : string, value : string, inList : b
 ].join( '' )
 
 // MARK: type utility
-export type conType = 'listen' | 'sender' | 'both' | 'tcp-client'
+export type conType = 'listen' | 'sender' | 'both' | 'tcp-client' | 'tcp-server'
 
 export const conCanHear = ( connection : ConnectionDefTypes ) : connection is UDPListenerDef | UDPBothDef | TCPClientDef => conTypeCanHear( connection.type )
-export const conTypeCanHear = ( type : conType ) => ( type === 'listen' || type === 'both' || type === 'tcp-client' )
+export const conTypeCanHear = ( type : conType ) => ( type === 'listen' || type === 'both' || type === 'tcp-client' || type === 'tcp-server' )
 
 export const conCanSend = ( connection : ConnectionDefTypes ) : connection is UDPSenderDef | UDPBothDef | TCPClientDef => conTypeCanSend( connection.type )
-export const conTypeCanSend = ( type : conType ) => ( type === 'sender' || type === 'both' || type === 'tcp-client' )
+export const conTypeCanSend = ( type : conType ) => ( type === 'sender' || type === 'both' || type === 'tcp-client' || type === 'tcp-server' )
 
 export const conHasListen = ( connection : ConnectionDefTypes ) : connection is UDPListenerDef | UDPBothDef => conTypeHasListen( connection.type )
-export const conTypeHasListen = ( type : conType ) => ( type === 'listen' || type === 'both' )
+export const conTypeHasListen = ( type : conType ) => ( type === 'listen' || type === 'both' || type === 'tcp-server' )
 
 export const conHasSend   = ( connection : ConnectionDefTypes ) : connection is UDPSenderDef | UDPBothDef | TCPClientDef => conTypeHasSend( connection.type )
 export const conTypeHasSend   = ( type : conType ) => ( type === 'sender' || type === 'both' || type === 'tcp-client' )
 
 export const conIsTCP   = ( connection : ConnectionDefTypes ) : connection is TCPClientDef => conTypeIsTCP( connection.type )
-export const conTypeIsTCP   = ( type : conType ) => ( type === 'tcp-client' )
+export const conTypeIsTCP   = ( type : conType ) => ( type === 'tcp-client' || type === 'tcp-server' )

@@ -108,10 +108,11 @@ export class UDPSender {
 		} )
 	}
 
-	isSender()    : this is UDPSender   { return true }
-	isListener()  : this is UDPListener { return false}
-	isBoth()      : this is UDPBoth     { return false}
-	isTCPClient() : this is TCPClient   { return false}
+	isSender()    : this is UDPSender   { return true  }
+	isListener()  : this is UDPListener { return false }
+	isBoth()      : this is UDPBoth     { return false }
+	isTCPClient() : this is TCPClient   { return false }
+	isTCPServer() : this is TCPServer   { return false }
 
 	toJSON() : UDPSenderDef {
 		return {
@@ -229,7 +230,8 @@ export class UDPListener {
 	isSender()    : this is UDPSender   { return false }
 	isListener()  : this is UDPListener { return true  }
 	isBoth()      : this is UDPBoth     { return false }
-	isTCPClient() : this is TCPClient   { return false}
+	isTCPClient() : this is TCPClient   { return false }
+	isTCPServer() : this is TCPServer   { return false }
 	ok()         : boolean { return this.#socket !== null }
 
 	send( _buffer : Buffer<ArrayBufferLike> ) { this.log.warn( 'attempt to send to listener only failed' ) }
@@ -365,6 +367,7 @@ export class UDPBoth {
 	isListener()  : this is UDPListener { return false}
 	isBoth()      : this is UDPBoth     { return true}
 	isTCPClient() : this is TCPClient   { return false}
+	isTCPServer() : this is TCPServer   { return false}
 	ok()         : boolean { return this.#socket !== null }
 
 	send( buffer : Buffer<ArrayBufferLike> ) {
@@ -567,11 +570,11 @@ export class TCPClient {
 		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
 	}
 
-	isSender()    : this is UDPSender   { return false}
-	isListener()  : this is UDPListener { return false}
-	isBoth()      : this is UDPBoth     { return false}
-	isTCPClient() : this is TCPClient  { return true}
-	// isTCPServer() : this is TCPServer  { return false}
+	isSender()    : this is UDPSender   { return false }
+	isListener()  : this is UDPListener { return false }
+	isBoth()      : this is UDPBoth     { return false }
+	isTCPClient() : this is TCPClient   { return true }
+	isTCPServer() : this is TCPServer   { return false }
 
 	ok()         : boolean { return this.#ready }
 
@@ -596,8 +599,175 @@ export class TCPClient {
 	}
 }
 
+//MARK: TCPClient
+
+export type TCPServerDef = {
+	listenAddress : string,
+	listenPort    : number,
+	spec          : '1.0' | '1.1',
+	type          : 'tcp-server'
+}
+
+export class TCPServer {
+	#lastSix        : number[] = []
+	#server         : net.Server | null = null
+	#ready          : boolean = false
+	#spec         ! : '1.0' | '1.1'
+	callback        : OSCListenerCallback
+	enabled         : boolean = true
+	listenAddress ! : IPv4Address
+	listenPort    ! : IPv4Port
+	log             : Logger
+	socketList      : Set<net.Socket> = new Set()
+
+	constructor( enabled : boolean, config : TCPServerDef, logger : Logger, callback : OSCListenerCallback ) {
+		if ( typeof logger !== 'object' ) {
+			throw new ConnectionError( 'logger needed' )
+		}
+		if ( ! ( typeof callback === 'function' ) ) {
+			throw new ConnectionError( 'callback needed' )
+		}
+		this.callback = callback
+		this.log      = logger
+		this.enabled  = enabled
+		this.#spec    = config.spec
+
+		try {
+			if ( isIPv4( config.listenAddress ) ) {
+				this.listenAddress = config.listenAddress
+			}
+			if ( isIPv4Port( config.listenPort ) ) {
+				this.listenPort = config.listenPort
+			}
+		} catch( err ) {
+			if ( err instanceof ConnectionError ) {
+				this.log.error( err.message )
+				throw new ConnectionError( `unable to create TCPServer connection :: ${err.message}` )
+			}
+			throw err
+		}
+
+		this.open()
+	}
+
+	close() {
+		if ( this.#server !== null ) {
+			for ( const socket of this.socketList ) { socket.destroySoon() }
+			this.#server.close()
+			this.#ready = false
+		}
+	}
+
+	open() {
+		this.#lastSix.length = 0
+
+		if ( !this.enabled ) {
+			return
+		}
+		try {
+			this.#server = net.createServer( ( socket ) => {
+				this.socketList.add( socket )
+				socket.on( 'end', () => {
+					this.log.info( `${socket.remoteAddress}:${socket.remotePort} disconnected` )
+					this.socketList.delete( socket )
+				} )
+				socket.on( 'error', ( err 	) => {
+					if ( err instanceof Error ) {
+						this.log.info( `${socket.remoteAddress}:${socket.remotePort} error : ${err.message}` )
+					} else {
+						this.log.info( `${socket.remoteAddress}:${socket.remotePort} unknown error` )
+					}
+				} )
+				socket.on( 'data', ( buffer ) => {
+					if ( this.#lastSix.length > 20 ) {
+						this.#lastSix.shift()
+					}
+					this.#lastSix.push( ( new Date() ).getTime() )
+
+					this.callback( this.#spec === '1.0' ?
+						TCPDecodePL( buffer, this.log ) :
+						TCPDecodeSLIP( buffer )
+					)
+				} )
+			} )
+
+			this.#server.on( 'error', ( err ) => {
+				this.log.error( `server error, closing :: ${err.message}` )
+				this.#ready = false
+				this.close()
+			} )
+
+			this.#server.on( 'close', () => {
+				this.log.info( 'server closed' )
+				this.#ready = false
+			} )
+
+			this.#server.on( 'listening', () => {
+				this.log.info( 'server opened' )
+				this.#ready = true
+			} )
+
+			this.#server.listen( this.listenPort, this.listenAddress )
+		} catch( err ) {
+			if ( err instanceof Error ) {
+				this.log.error( `connection bind error :: ${err.message}` )
+			} else {
+				this.log.error( 'connection bind error :: unknown' )
+			}
+			this.#server = null
+		}
+
+	}
+
+	get sinceEver() { return this.#lastSix.length !== 0 }
+	get sinceLast() {
+		if ( this.#lastSix.length === 0 ) {
+			return Infinity
+		}
+		return ( new Date() ).getTime() - this.#lastSix[this.#lastSix.length - 1]
+	}
+
+	get frequency() {
+		if ( this.#lastSix.length < 2 ) {
+			return 0
+		}
+		const lenMinOne = this.#lastSix.length - 1
+		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
+	}
+
+	isSender()    : this is UDPSender   { return false }
+	isListener()  : this is UDPListener { return false }
+	isBoth()      : this is UDPBoth     { return false }
+	isTCPClient() : this is TCPClient   { return false }
+	isTCPServer() : this is TCPServer   { return true }
+
+	ok()         : boolean { return this.#ready }
+
+	send( buffer : Buffer<ArrayBufferLike> ) {
+		if ( this.#ready === true ) {
+			for ( const socket of this.socketList ) {
+				socket.write( this.#spec === '1.0' ?
+					TCPEncodePL( buffer ) :
+					TCPEncodeSLIP( buffer )
+				)
+			}
+		} else {
+			this.log.warn( `send to ${this.listenAddress}:${this.listenPort} server failed :: server not open` )
+		}
+	}
+
+	toJSON() : TCPServerDef {
+		return {
+			listenAddress : this.listenAddress,
+			listenPort    : this.listenPort,
+			spec          : this.#spec,
+			type          : 'tcp-server',
+		}
+	}
+}
+
 // MARK: ConnectionDef
-export type ConnectionDefTypes = UDPListenerDef | UDPSenderDef | UDPBothDef | TCPClientDef
+export type ConnectionDefTypes = UDPListenerDef | UDPSenderDef | UDPBothDef | TCPClientDef | TCPServerDef
 export type ConnectionDef = {
 	connectionPrime      : ConnectionDefTypes
 	enabled              : boolean
@@ -614,7 +784,7 @@ export class Connection extends EventEmitter {
 	#heartbeatBuffer     : Buffer<ArrayBufferLike> | null = null
 	#heartbeatInterval   : ReturnType<typeof setInterval> | null = null
 	#log                 : Logger
-	connectionPrime      : UDPListener | UDPSender | UDPBoth | TCPClient
+	connectionPrime      : UDPListener | UDPSender | UDPBoth | TCPClient | TCPServer
 	enabled              : boolean = true
 	forwarders           : UDPSender[] = []
 	name                 : string
@@ -661,7 +831,7 @@ export class Connection extends EventEmitter {
 		if ( Buffer.isBuffer( b ) && b.length !== 0 ) {
 			for ( const forwarder of this.forwarders ) { forwarder.send( b ) }
 		}
-		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth()  || this.connectionPrime.isTCPClient() ) {
+		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth() || this.connectionPrime.isTCPClient() || this.connectionPrime.isTCPServer() ) {
 			try {
 				const message = OSCPacket.fromBuffer( b )
 
@@ -690,7 +860,7 @@ export class Connection extends EventEmitter {
 			clearInterval( this.#heartbeatInterval )
 			this.#heartbeatInterval = null
 		}
-		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth() ) {
+		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth() || this.connectionPrime.isTCPClient() || this.connectionPrime.isTCPServer() ) {
 			this.#log.debug( 'Closing connection' )
 			this.connectionPrime.close()
 		}
@@ -720,6 +890,8 @@ export class Connection extends EventEmitter {
 			this.connectionPrime = new UDPListener( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
 		} else if ( v.connectionPrime.type === 'tcp-client' ) {
 			this.connectionPrime = new TCPClient( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
+		} else if ( v.connectionPrime.type === 'tcp-server' ) {
+			this.connectionPrime = new TCPServer( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
 		} else {
 			throw new Error( 'invalid connection type' )
 		}

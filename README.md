@@ -53,7 +53,7 @@ The "Add Connection" button lets you manually add a new connection.  The "Discov
 ### Overview
 
 - __Name__ : Name of the connection, unique identifier suggested.
-- __Type__ : 'send', 'send+listen', or 'listen'
+- __Type__ : (UDP) 'send', 'send+listen', 'listen', or 'tcp-client', 'tcp-server'
 - __Enabled__ : 'yes' or 'no'
 
 ### Primary
@@ -62,10 +62,11 @@ The "Add Connection" button lets you manually add a new connection.  The "Discov
 - __Listen Port__ : UDP port to listen on, 1024-65535
 - __Send Address__ : IP Address to send to
 - __Send Port__ : UDP port to send to, 1024-65535. Same port sending is supported, it is however unlikely to function as expected for connections on the same interface.  (for instance, the X32 uses this method, but trying to run the X32 simulator on the local host will not work)
+- __TCP Mode__ : For `tcp-server` and `tcp-client` types, sets the TCP transport mode - 1.0 Packet Length or 1.1 SLIP.
 
 ### Forwarders
 
-Zero or more IP/port combinations to forward all received traffic to.  Data is sent as-is, no modification or integrity checking is performed.
+Zero or more IP/port combinations to forward all received traffic to (UDP only at the moment).  Data is sent as-is, no modification or integrity checking is performed.
 
 ### Heartbeat
 

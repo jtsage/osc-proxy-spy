@@ -102,7 +102,8 @@ export class Settings extends EventEmitter {
 			typeof thisCon !== 'undefined' && (
 				thisCon.connectionPrime.isSender() ||
 				thisCon.connectionPrime.isBoth() ||
-				thisCon.connectionPrime.isTCPClient()
+				thisCon.connectionPrime.isTCPClient() ||
+				thisCon.connectionPrime.isTCPServer()
 			)
 		) {
 			try {
@@ -110,11 +111,11 @@ export class Settings extends EventEmitter {
 				thisCon.connectionPrime.send( oscMessage.buffer )
 				this.#log.info( `Sent OSC Message :: ${oscMessage.debug}` )
 				const thisEmitMsg : Connect.OSCListenEvent = {
-					address    : thisCon.connectionPrime.sendAddress,
+					address    : thisCon.connectionPrime.isTCPServer() ? '--' : thisCon.connectionPrime.sendAddress,
 					bundleTime : false,
 					message    : oscMessage.toJSON(),
 					name       : `${thisCon.name}-SEND`,
-					port       : thisCon.connectionPrime.sendPort,
+					port       : thisCon.connectionPrime.isTCPServer() ? thisCon.connectionPrime.listenPort : thisCon.connectionPrime.sendPort,
 					timestamp  : ( new Date() ).getTime(),
 				}
 				this.emit( 'message', thisEmitMsg )
@@ -136,13 +137,13 @@ export class Settings extends EventEmitter {
 	getFreq() {
 		const results : Connect.OSCListenFreqEvent[] = []
 		for ( const con of this.#connections ) {
-			if ( con.connectionPrime.isListener() || con.connectionPrime.isBoth() || con.connectionPrime.isTCPClient() ) {
+			if ( con.connectionPrime.isListener() || con.connectionPrime.isBoth() || con.connectionPrime.isTCPClient() || con.connectionPrime.isTCPServer() ) {
 				results.push( {
 					average   : con.connectionPrime.frequency,
 					ever      : con.connectionPrime.sinceEver,
 					name      : con.name,
 					since     : con.connectionPrime.sinceLast,
-					tcpStatus : con.connectionPrime.isTCPClient() ? con.connectionPrime.ok() : null,
+					tcpStatus : con.connectionPrime.isTCPClient() || con.connectionPrime.isTCPServer() ? con.connectionPrime.ok() : null,
 				} )
 			}
 		}
