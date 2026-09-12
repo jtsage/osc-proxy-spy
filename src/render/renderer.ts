@@ -171,7 +171,7 @@ const updateLog = () => {
 			thisDiv.classList.add( 'data-osc' )
 			thisDiv.innerHTML = [
 				util.OSCDisplayParts.timeStamp( ( new Date( item[0] ).toLocaleString() ) ),
-				util.OSCDisplayParts.address( item[1] ),
+				util.OSCDisplayParts.logLevel( item[1] ),
 				item[2] === null ? '' : util.OSCDisplayParts.connection( item[2] ),
 				util.OSCDisplayParts.arg( { type : 'string', value : item[3] } ),
 			].join( '' )
@@ -188,7 +188,7 @@ const newLog = () => {
 			return [
 				'<div class="data-osc">',
 				util.OSCDisplayParts.timeStamp( ( new Date( item[0] ).toLocaleString() ) ),
-				util.OSCDisplayParts.address( item[1] ),
+				util.OSCDisplayParts.logLevel( item[1] ),
 				item[2] === null ? '' : util.OSCDisplayParts.connection( item[2] ),
 				util.OSCDisplayParts.arg( { type : 'string', value : item[3] } ),
 				'</div>'

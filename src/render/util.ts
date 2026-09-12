@@ -250,6 +250,7 @@ const oscReplaceMessage = ( v : OSCListenEvent ) : boolean => {
 export const OSCDisplayParts = {
 	address    : ( v : string ) => `<div class="osc-address">${v}</div>`,
 	connection : ( v : string ) => `<div class="osc-name">${v}</div>`,
+	logLevel    : ( v : string ) => `<div class="osc-log-level osc-log-level-${v}">${v}</div>`,
 	start      : ( c : string, a : string, i : string, p : number ) => `<div class="data-osc" data-connection="${c}" data-address="${a}" title="${i}:${p}">`,
 	timeStamp  : ( v : string ) => `<div class="osc-timestamp">${v}</div>`,
 
@@ -285,24 +286,27 @@ export const freqEntry = ( v : OSCListenFreqEvent ) => {
 	const thisColorClass = ! v.ever ? 'osc-tick-name-bad' : v.since > 10000 ? 'osc-tick-name-maybe' : 'osc-tick-name-good'
 	const foundItem = document.querySelector( `[data-tick-time="${v.name}"]` )
 
+	const nameText = v.tcpStatus === null || v.tcpStatus === true ? v.name : `<i class="bi bi-exclamation-triangle"></i> ${v.name}`
+
 	if ( foundItem !== null ) {
 		const nameItem = document.querySelector( `[data-tick-name="${v.name}"]` )
 		if ( nameItem !== null && !nameItem.classList.contains( thisColorClass ) ) {
 			nameItem.classList.remove( 'osc-tick-name-bad', 'osc-tick-name-good', 'osc-tick-name-maybe' )
 			nameItem.classList.add( thisColorClass )
+			nameItem.innerHTML = nameText
 		}
 		foundItem.textContent = timeString
 		const sinceItem = document.querySelector( `[data-tick-since="${v.name}"]` )
 		if ( sinceItem !== null ) {
 			sinceItem.textContent = sinceString
 		}
-			
+
 		return
 	}
-		
+
 	const thisDiv = document.createElement( 'div' )
 	thisDiv.innerHTML = [
-		`<div data-tick-name="${v.name}" class="${thisColorClass}">${v.name}</div>`,
+		`<div data-tick-name="${v.name}" class="${thisColorClass}">${nameText}</div>`,
 		`<div data-tick-time="${v.name}" class="osc-tick-time">${timeString}</div>`,
 		`<div data-tick-since="${v.name}" class="osc-tick-time">${sinceString}</div>`,
 	].join( '' )

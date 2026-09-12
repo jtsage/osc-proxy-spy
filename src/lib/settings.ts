@@ -138,10 +138,11 @@ export class Settings extends EventEmitter {
 		for ( const con of this.#connections ) {
 			if ( con.connectionPrime.isListener() || con.connectionPrime.isBoth() || con.connectionPrime.isTCPClient() ) {
 				results.push( {
-					average : con.connectionPrime.frequency,
-					ever    : con.connectionPrime.sinceEver,
-					name    : con.name,
-					since   : con.connectionPrime.sinceLast,
+					average   : con.connectionPrime.frequency,
+					ever      : con.connectionPrime.sinceEver,
+					name      : con.name,
+					since     : con.connectionPrime.sinceLast,
+					tcpStatus : con.connectionPrime.isTCPClient() ? con.connectionPrime.ok() : null,
 				} )
 			}
 		}

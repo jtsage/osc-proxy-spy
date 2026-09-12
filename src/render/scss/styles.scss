@@ -52,6 +52,27 @@ $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts";
 	margin-right     : 6px !important;
 }
 
+.osc-log-level {
+	background-color : RGBA(var(--bs-primary-rgb), var(--bs-bg-opacity, 1)) !important;
+	border-radius    : 0.175rem !important;
+	color            : #fff !important;
+	font-weight      : var(--bs-badge-font-weight) !important;
+	margin-left      : 6px !important;
+	margin-right     : 6px !important;
+}
+
+.osc-log-level-WARN {
+	background-color : RGBA(var(--bs-warning-rgb), var(--bs-bg-opacity, 1)) !important;
+}
+
+.osc-log-level-DEBUG {
+	background-color : RGBA(var(--bs-secondary-rgb), var(--bs-bg-opacity, 1)) !important;
+}
+
+.osc-log-level-ERROR {
+	background-color : RGBA(var(--bs-danger-rgb), var(--bs-bg-opacity, 1)) !important;
+}
+
 .osc-arg-integer, .osc-arg-integer64 {
 	background-color : RGBA(var(--bs-info-rgb), var(--bs-bg-opacity, 1)) !important;
 	color            : #000 !important;

@@ -51,10 +51,11 @@ export type OSCListenEventPart = {
 }
 
 export type OSCListenFreqEvent = {
-	average : number,
-	ever    : boolean,
-	name    : string
-	since   : number,
+	average   : number,
+	ever      : boolean,
+	name      : string,
+	since     : number,
+	tcpStatus : boolean | null,
 }
 
 // MARK: UDPSender
@@ -451,6 +452,8 @@ export class TCPClient {
 	sendAddress   ! : IPv4Address
 	sendPort      ! : IPv4Port
 	log             : Logger
+	retryAttempts   : number = 0
+	retryTimeout    : ReturnType<typeof setTimeout> | null = null
 
 	constructor( enabled : boolean, config : TCPClientDef, logger : Logger, callback : OSCListenerCallback ) {
 		if ( typeof logger !== 'object' ) {
@@ -491,6 +494,8 @@ export class TCPClient {
 
 	open() {
 		this.#lastSix.length = 0
+		this.retryAttempts++
+
 		if ( !this.enabled ) {
 			return
 		}
@@ -513,6 +518,15 @@ export class TCPClient {
 				this.log.error( `client error, closing :: ${err.message}` )
 				this.#ready = false
 				this.close()
+				if ( this.retryAttempts > 20 ) {
+					this.log.error( 'Reconnect failed 20+ times, not retrying' )
+				} else if ( this.retryAttempts > 5 ) {
+					this.log.info( 'Retry connect in 2min...' )
+					this.retryTimeout = setTimeout( () => { this.open() }, 120000 )
+				} else {
+					this.log.info( 'Retry connect in 15secs...' )
+					this.retryTimeout = setTimeout( () => { this.open() }, 15000 )
+				}
 			} )
 
 			this.#client.on( 'end', () => {
@@ -521,6 +535,7 @@ export class TCPClient {
 			} )
 
 			this.#client.on( 'connect', () => {
+				this.retryAttempts = 0
 				this.log.info( 'connection opened' )
 				this.#ready = true
 			} )
