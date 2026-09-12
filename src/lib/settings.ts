@@ -101,14 +101,15 @@ export class Settings extends EventEmitter {
 		if (
 			typeof thisCon !== 'undefined' && (
 				thisCon.connectionPrime.isSender() ||
-				thisCon.connectionPrime.isBoth()
+				thisCon.connectionPrime.isBoth() ||
+				thisCon.connectionPrime.isTCPClient()
 			)
 		) {
 			try {
 				const oscMessage = new OSCMessage( this.#sendAddress, this.#sendArgs )
 				thisCon.connectionPrime.send( oscMessage.buffer )
 				this.#log.info( `Sent OSC Message :: ${oscMessage.debug}` )
-				const thisEmitMsg : Connect.UDPListenEvent = {
+				const thisEmitMsg : Connect.OSCListenEvent = {
 					address    : thisCon.connectionPrime.sendAddress,
 					bundleTime : false,
 					message    : oscMessage.toJSON(),
@@ -133,9 +134,9 @@ export class Settings extends EventEmitter {
 	}
 
 	getFreq() {
-		const results : Connect.UDPListenFreqEvent[] = []
+		const results : Connect.OSCListenFreqEvent[] = []
 		for ( const con of this.#connections ) {
-			if ( con.connectionPrime.isListener() || con.connectionPrime.isBoth() ) {
+			if ( con.connectionPrime.isListener() || con.connectionPrime.isBoth() || con.connectionPrime.isTCPClient() ) {
 				results.push( {
 					average : con.connectionPrime.frequency,
 					ever    : con.connectionPrime.sinceEver,
@@ -147,7 +148,7 @@ export class Settings extends EventEmitter {
 		this.emit( 'frequency', results )
 	}
 
-	#emitWithChecks( v : Connect.UDPListenEvent ) {
+	#emitWithChecks( v : Connect.OSCListenEvent ) {
 		// excluded collections
 		if ( this.#excludeConnection.length !== 0 && this.#excludeConnection.includes( v.name ) ) {
 			return
@@ -193,7 +194,7 @@ export class Settings extends EventEmitter {
 	addConnect( v : Connect.ConnectionDef ) : SettingsDef {
 		const connection = new Connect.Connection( v, this.#log )
 		this.#connections.push( connection )
-		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
+		connection.on( 'message', ( u : Connect.OSCListenEvent ) => { this.#emitWithChecks( u ) } )
 		this.saveToDisk()
 		return this.save()
 	}
@@ -216,7 +217,7 @@ export class Settings extends EventEmitter {
 		this.#connections[i].close()
 		const connection = new Connect.Connection( v, this.#log )
 		this.#connections[i] = connection
-		connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
+		connection.on( 'message', ( u : Connect.OSCListenEvent ) => { this.#emitWithChecks( u ) } )
 		this.saveToDisk()
 		return this.save()
 	}
@@ -234,7 +235,7 @@ export class Settings extends EventEmitter {
 		for ( const con of mergedDefault.connections ) {
 			const connection = new Connect.Connection( con, this.#log )
 			this.#connections.push( connection )
-			connection.on( 'message', ( u : Connect.UDPListenEvent ) => { this.#emitWithChecks( u ) } )
+			connection.on( 'message', ( u : Connect.OSCListenEvent ) => { this.#emitWithChecks( u ) } )
 		}
 
 		this.#excludeConnection = mergedDefault.excludeConnection

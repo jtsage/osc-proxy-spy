@@ -13,7 +13,7 @@ import * as util from './util'
 import { connectStartUp, parseConnections } from './connect'
 
 import { IpcType } from '../preload'
-import { UDPListenEvent, UDPListenFreqEvent } from 'src/lib/connection'
+import { OSCListenEvent, OSCListenFreqEvent } from 'src/lib/connection'
 import { SettingsDef } from 'src/lib/settings'
 import { OSCArgObject } from 'simple-osc-lib'
 declare global { interface Window { ipc : IpcType } }
@@ -42,18 +42,18 @@ window.ipc.receive( 'view', ( id : string ) => {
 	}
 } )
 
-window.ipc.receive( 'osc:data', ( data : UDPListenEvent ) => {
+window.ipc.receive( 'osc:data', ( data : OSCListenEvent ) => {
 	if ( isPaused ) {
 		return
 	}
 	if ( currentSettings.modeAll ) {
-		util.buildUDPListenEvent( data )
+		util.buildOSCListenEvent( data )
 	} else {
-		util.replaceUDPListenEvent( data )
+		util.replaceOSCListenEvent( data )
 	}
 } )
 
-window.ipc.receive( 'osc:tick', ( data : UDPListenFreqEvent[] ) => { for ( const item of data ) { util.freqEntry( item ) } } )
+window.ipc.receive( 'osc:tick', ( data : OSCListenFreqEvent[] ) => { for ( const item of data ) { util.freqEntry( item ) } } )
 
 document.addEventListener( 'DOMContentLoaded', () => {
 	settingsStartup()
@@ -253,7 +253,7 @@ const updateSettings = () => {
 	}
 
 	const conNames = [
-		...currentSettings.connections.filter( ( item ) => item.connectionPrime.type === 'listen' || item.connectionPrime.type === 'both' ).map( ( item ) => item.name )
+		...currentSettings.connections.filter( ( item ) => util.conCanHear( item.connectionPrime ) ).map( ( item ) => item.name )
 	]
 
 	util.setInnerHTML( 'connection-view-filter', conNames.map( ( item ) =>

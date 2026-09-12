@@ -42,8 +42,6 @@ type currentEditDef = {
 	data  : ConnectionDef
 } | null
 
-type conType = 'listen' | 'sender' | 'both'
-
 let currentEdit : currentEditDef = null
 let conSettings : SettingsDef
 let addModal    : bootstrap.Modal
@@ -209,22 +207,36 @@ export const connectStartUp = () => {
 	} )
 
 	util.listenToId( 'connect-add-fwd', 'click', () => {
-		if ( currentEdit === null || currentEdit.data.connectionPrime.type !== 'both' ) return
+		if ( currentEdit === null || ! ( util.conCanHear( currentEdit.data.connectionPrime ) && util.conCanSend( currentEdit.data.connectionPrime ) ) ) return
 		currentEdit.data.forwarders.push( { type : 'sender', sendAddress : '127.0.0.1', sendPort : 1024 } )
 		updateConnectionData( currentEdit.data, currentEdit.index )
 		unprotectConnection( currentEdit.data.connectionPrime.type )
 	} )
 
+	util.listenToId( 'connect-tcp-mode', 'change', () => {
+		if ( currentEdit !== null && util.conIsTCP( currentEdit.data.connectionPrime ) ) {
+			const current = util.getSafeSelectValue( 'connect-tcp-mode', '1.0' ) as '1.0' | '1.1'
+			currentEdit.data.connectionPrime.spec = current !== '1.1' ? '1.0' : '1.1'
+		}
+	} )
+
 	util.listenToId( 'connect-type', 'change', () => {
 		if ( currentEdit !== null ) {
-			currentEdit.data.connectionPrime.type = util.getSafeSelectValue( 'connect-type', currentEdit.data.connectionPrime.type ) as conType
-			if ( currentEdit.data.connectionPrime.type === 'both' || currentEdit.data.connectionPrime.type === 'listen' ) {
+			currentEdit.data.connectionPrime.type = util.getSafeSelectValue( 'connect-type', currentEdit.data.connectionPrime.type ) as util.conType
+			if ( util.conHasListen( currentEdit.data.connectionPrime ) ) {
 				currentEdit.data.connectionPrime.listenAddress = util.getSafeSelectValue( 'connect-in-address', '0.0.0.0' )
 				currentEdit.data.connectionPrime.listenPort = parseInt( util.getFormValue( 'connect-in-port' ) ?? '0' )
 			}
-			if ( currentEdit.data.connectionPrime.type === 'both' || currentEdit.data.connectionPrime.type === 'sender' ) {
+			if ( util.conHasSend( currentEdit.data.connectionPrime ) ) {
 				currentEdit.data.connectionPrime.sendAddress = util.getSafeSelectValue( 'connect-out-address', '127.0.0.1' )
 				currentEdit.data.connectionPrime.sendPort = parseInt( util.getFormValue( 'connect-out-port' ) ?? '0' )
+			}
+			if ( util.conIsTCP( currentEdit.data.connectionPrime ) ) {
+				const current = util.getSafeSelectValue( 'connect-tcp-mode', '1.0' ) as '1.0' | '1.1'
+				if ( current !== '1.0' && current !== '1.1' ) {
+					util.setSelectValue( 'connect-tcp-mode', '1.0' )
+				}
+				currentEdit.data.connectionPrime.spec = current !== '1.1' ? '1.0' : '1.1'
 			}
 
 			unprotectConnection( currentEdit.data.connectionPrime.type )
@@ -247,14 +259,14 @@ export const connectStartUp = () => {
 	} )
 
 	util.listenToId( 'connect-in-address', 'change', () => {
-		if ( currentEdit !== null && ( currentEdit.data.connectionPrime.type === 'listen' || currentEdit.data.connectionPrime.type === 'both' ) ) {
+		if ( currentEdit !== null && util.conHasListen( currentEdit.data.connectionPrime ) ) {
 			currentEdit.data.connectionPrime.listenAddress = util.getSafeSelectValue( 'connect-in-address', currentEdit.data.connectionPrime.listenAddress )
 			saveOk()
 		}
 	} )
 
 	util.listenToId( 'connect-in-port', 'change', () => {
-		if ( currentEdit !== null && ( currentEdit.data.connectionPrime.type === 'listen' || currentEdit.data.connectionPrime.type === 'both' ) ) {
+		if ( currentEdit !== null && util.conHasListen( currentEdit.data.connectionPrime ) ) {
 			const newPort = parseInt( util.getFormValue( 'connect-in-port' ) ?? '0' )
 			if ( newPort > 1023 && newPort < 65536 ) {
 				currentEdit.data.connectionPrime.listenPort = newPort
@@ -266,7 +278,7 @@ export const connectStartUp = () => {
 	} )
 
 	util.listenToId( 'connect-out-port', 'change', () => {
-		if ( currentEdit !== null && ( currentEdit.data.connectionPrime.type === 'sender' || currentEdit.data.connectionPrime.type === 'both' ) ) {
+		if ( currentEdit !== null && util.conHasSend( currentEdit.data.connectionPrime ) ) {
 			const newPort = parseInt( util.getFormValue( 'connect-out-port' ) ?? '0' )
 			if ( newPort > 1023 && newPort < 65536 ) {
 				currentEdit.data.connectionPrime.sendPort = newPort
@@ -278,7 +290,7 @@ export const connectStartUp = () => {
 	} )
 
 	util.listenToId( 'connect-out-address', 'change', () => {
-		if ( currentEdit !== null && ( currentEdit.data.connectionPrime.type === 'sender' || currentEdit.data.connectionPrime.type === 'both' ) ) {
+		if ( currentEdit !== null && util.conHasSend( currentEdit.data.connectionPrime ) ) {
 			const newAddress = util.getFormValue( 'connect-out-address' ) ?? ''
 			if ( isIPv4( newAddress ) ) {
 				currentEdit.data.connectionPrime.sendAddress = newAddress
@@ -290,7 +302,7 @@ export const connectStartUp = () => {
 	} )
 
 	util.listenToId( 'connect-heart-address', 'change', () => {
-		if ( currentEdit !== null && ( currentEdit.data.connectionPrime.type === 'sender' || currentEdit.data.connectionPrime.type === 'both' ) ) {
+		if ( currentEdit !== null && util.conCanSend( currentEdit.data.connectionPrime ) ) {
 			const newAddress = util.getFormValue( 'connect-heart-address' ) ?? ''
 			currentEdit.data.oscHeartBeatAddress = newAddress === '' ? null : newAddress
 			saveOk()
@@ -298,14 +310,14 @@ export const connectStartUp = () => {
 	} )
 
 	util.listenToId( 'connect-heart-enabled', 'change', () => {
-		if ( currentEdit !== null ) {
+		if ( currentEdit !== null && util.conCanSend( currentEdit.data.connectionPrime ) ) {
 			currentEdit.data.oscHeartBeatEnabled = ( util.getSafeSelectValue( 'connect-heart-enabled', currentEdit.data.oscHeartBeatEnabled ? '1' : '0' ) ) === '1'
 			saveOk()
 		}
 	} )
 
 	util.listenToId( 'connect-heart-interval', 'change', () => {
-		if ( currentEdit !== null && ( currentEdit.data.connectionPrime.type === 'sender' || currentEdit.data.connectionPrime.type === 'both' ) ) {
+		if ( currentEdit !== null && util.conCanSend( currentEdit.data.connectionPrime ) ) {
 			const newInterval = parseInt( util.getFormValue( 'connect-heart-interval' ) ?? '0' )
 			if ( newInterval > 1023 && newInterval < 65536 ) {
 				currentEdit.data.oscHeartBeatInterval = newInterval
@@ -327,7 +339,7 @@ export const parseConnections = ( v : SettingsDef ) => {
 	const conSelect    = [`<option value="-1" ${conSelectIdx === -1 ? 'selected' : ''}>n/a</option>`]
 
 	for ( const [index, con] of conSettings.connections.entries() ) {
-		if ( con.connectionPrime.type !== 'listen' ) {
+		if ( util.conCanSend( con.connectionPrime ) ) {
 			conSelect.push( `<option value="${index}" ${conSelectIdx === index ? 'selected' : ''}>[${index}] ${con.name}</option>` )
 		}
 	}
@@ -395,7 +407,7 @@ const updateConnectionData = ( thisConn : ConnectionDef, i : number ) => {
 	util.setSelectValue( 'connect-type', thisConn.connectionPrime.type )
 	util.setSelectValue( 'connect-enabled', thisConn.enabled ? '1' : '0' )
 
-	if ( thisConn.connectionPrime.type === 'listen' || thisConn.connectionPrime.type === 'both' ) {
+	if ( util.conHasListen( thisConn.connectionPrime ) ) {
 		util.setSelectValue( 'connect-in-address', thisConn.connectionPrime.listenAddress )
 		util.setFormValue( 'connect-in-port', String( thisConn.connectionPrime.listenPort ) )
 	} else {
@@ -403,7 +415,7 @@ const updateConnectionData = ( thisConn : ConnectionDef, i : number ) => {
 		util.setFormValue( 'connect-in-port', '' )
 	}
 
-	if ( thisConn.connectionPrime.type === 'sender' || thisConn.connectionPrime.type === 'both' ) {
+	if ( util.conHasSend( thisConn.connectionPrime ) ) {
 		util.setFormValue( 'connect-out-address', thisConn.connectionPrime.sendAddress )
 		util.setFormValue( 'connect-out-port', String( thisConn.connectionPrime.sendPort ) )
 
@@ -417,6 +429,12 @@ const updateConnectionData = ( thisConn : ConnectionDef, i : number ) => {
 		util.setSelectValue( 'connect-heart-enabled', '0' )
 		util.setFormValue( 'connect-heart-address', '' )
 		util.setFormValue( 'connect-heart-interval', '' )
+	}
+
+	if ( util.conIsTCP( thisConn.connectionPrime ) ) {
+		util.setSelectValue( 'connect-tcp-mode', thisConn.connectionPrime.spec )
+	} else {
+		util.setSelectValue( 'connect-tcp-mode', '0' )
 	}
 
 	const fwdHTML = thisConn.forwarders.map( ( x, idx ) => [
@@ -498,14 +516,14 @@ const editLockOut = ( disabled : boolean ) => {
 }
 
 // MARK: unprotect fields
-const unprotectConnection = ( type : 'both' | 'listen' | 'sender' ) => {
+const unprotectConnection = ( type : util.conType ) => {
 	editLockOut( true )
 	const allInputs = document.querySelectorAll( '#connect-tab input, #connect-tab select' )
 	const buttons = document.querySelectorAll( '#connect-add-fwd, .fwd-delete, #connect-heart-actions' )
 	
 	for ( const element of buttons ) {
 		if ( element instanceof HTMLElement ) {
-			if ( type === 'both' ) {
+			if ( util.conTypeCanHear( type ) ) {
 				element.classList.remove( 'd-none' )
 			} else {
 				element.classList.add( 'd-none' )
@@ -517,12 +535,14 @@ const unprotectConnection = ( type : 'both' | 'listen' | 'sender' ) => {
 		if ( element instanceof HTMLInputElement || element instanceof HTMLSelectElement ) {
 			if ( element.id === 'connect-out-address' || element.id === 'connect-out-port' ) {
 				// SENDER TYPES - OUT A:P
-				element.disabled = ! ( type === 'both' || type === 'sender' )
+				element.disabled = ! util.conTypeHasSend( type )
 			} else if ( element.id === 'connect-in-address' || element.id === 'connect-in-port' ) {
 				// LISTENER TYPES - IN A:P
-				element.disabled = ! ( type === 'both' || type === 'listen' )
+				element.disabled = ! util.conTypeHasListen( type )
 			} else if ( element.id.startsWith( 'connect-fwd' ) || element.id.startsWith( 'connect-heart' ) ) {
-				element.disabled = type !== 'both'
+				element.disabled = ! util.conTypeCanSend( type )
+			} else if ( element.id === 'connect-tcp-mode' ) {
+				element.disabled = ! util.conTypeIsTCP( type )
 			} else {
 				element.disabled = false
 			}

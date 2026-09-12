@@ -7,7 +7,7 @@ import started from 'electron-squirrel-startup'
 import * as packJSON from '../package.json' with { type : 'json' }
 import { MainLogger } from './lib/logger'
 import { Settings } from './lib/settings'
-import { ConnectionDef, UDPListenEvent, UDPListenFreqEvent } from './lib/connection'
+import { ConnectionDef, OSCListenEvent, OSCListenFreqEvent } from './lib/connection'
 import Bonjour from 'bonjour-service'
 
 const debug = !app.isPackaged && true
@@ -147,8 +147,8 @@ app.on( 'ready', () => {
 		return settings.save()
 	} )
 
-	settings.on( 'message',   ( v : UDPListenEvent )       => { safeSend( 'osc:data', v ) } )
-	settings.on( 'frequency', ( v : UDPListenFreqEvent[] ) => { safeSend( 'osc:tick', v ) } )
+	settings.on( 'message',   ( v : OSCListenEvent )       => { safeSend( 'osc:data', v ) } )
+	settings.on( 'frequency', ( v : OSCListenFreqEvent[] ) => { safeSend( 'osc:tick', v ) } )
 } )
 
 app.on( 'before-quit', () => { settings.saveToDisk() } )

@@ -10,6 +10,7 @@ import { Logger, MainLogger } from './logger'
 import dgram                  from 'node:dgram'
 import EventEmitter           from 'node:events'
 import net                    from 'node:net'
+import * as slip              from 'protocol-slip'
 import { OSCMessage, OSCArgObject, OSCPacket, OSCBundle, OSCBundleMessage } from 'simple-osc-lib'
 import { OSCMessageObject } from 'simple-osc-lib/type'
 
@@ -32,7 +33,7 @@ function isIPv4Port( port : number ) : port is IPv4Port {
 }
 
 // MARK: Event Types
-export type UDPListenEvent = {
+export type OSCListenEvent = {
 	bundleTime : number | boolean | null,
 	message    : OSCMessageObject,
 	timestamp  : number,
@@ -41,7 +42,7 @@ export type UDPListenEvent = {
 	port       : number
 }
 
-export type UDPListenEventPart = {
+export type OSCListenEventPart = {
 	bundleTime : number | boolean | null,
 	timestamp  : number,
 	name       : string,
@@ -49,7 +50,7 @@ export type UDPListenEventPart = {
 	port       : number
 }
 
-export type UDPListenFreqEvent = {
+export type OSCListenFreqEvent = {
 	average : number,
 	ever    : boolean,
 	name    : string
@@ -106,9 +107,10 @@ export class UDPSender {
 		} )
 	}
 
-	isSender()   : this is UDPSender   { return true }
-	isListener() : this is UDPListener { return false}
-	isBoth()     : this is UDPBoth     { return false}
+	isSender()    : this is UDPSender   { return true }
+	isListener()  : this is UDPListener { return false}
+	isBoth()      : this is UDPBoth     { return false}
+	isTCPClient() : this is TCPClient   { return false}
 
 	toJSON() : UDPSenderDef {
 		return {
@@ -120,7 +122,7 @@ export class UDPSender {
 }
 
 // MARK : UDPListener
-type UDPListenerCallback = ( b : Buffer<ArrayBufferLike> ) => void
+type OSCListenerCallback = ( b : Buffer<ArrayBufferLike> ) => void
 
 export type UDPListenerDef = {
 	listenAddress : string,
@@ -131,13 +133,13 @@ export type UDPListenerDef = {
 export class UDPListener {
 	#lastSix        : number[] = []
 	#socket         : dgram.Socket | null = null
-	callback        : UDPListenerCallback
+	callback        : OSCListenerCallback
 	enabled         : boolean = true
 	listenAddress ! : IPv4Address
 	listenPort    ! : IPv4Port
 	log             : Logger
 
-	constructor( enabled : boolean, config : UDPListenerDef, logger : Logger, callback : UDPListenerCallback ) {
+	constructor( enabled : boolean, config : UDPListenerDef, logger : Logger, callback : OSCListenerCallback ) {
 		if ( typeof logger !== 'object' ) {
 			throw new ConnectionError( 'logger needed' )
 		}
@@ -223,9 +225,10 @@ export class UDPListener {
 		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
 	}
 
-	isSender()   : this is UDPSender   { return false }
-	isListener() : this is UDPListener { return true  }
-	isBoth()     : this is UDPBoth     { return false }
+	isSender()    : this is UDPSender   { return false }
+	isListener()  : this is UDPListener { return true  }
+	isBoth()      : this is UDPBoth     { return false }
+	isTCPClient() : this is TCPClient   { return false}
 	ok()         : boolean { return this.#socket !== null }
 
 	send( _buffer : Buffer<ArrayBufferLike> ) { this.log.warn( 'attempt to send to listener only failed' ) }
@@ -253,7 +256,7 @@ export class UDPBoth {
 	#lastSix        : number[] = []
 	#sharedPort     : boolean = false
 	#socket         : dgram.Socket | null = null
-	callback        : UDPListenerCallback
+	callback        : OSCListenerCallback
 	enabled         : boolean = true
 	listenAddress ! : IPv4Address
 	listenPort    ! : IPv4Port
@@ -261,7 +264,7 @@ export class UDPBoth {
 	sendPort      ! : IPv4Port
 	log             : Logger
 
-	constructor( enabled : boolean, config : UDPBothDef, logger : Logger, callback : UDPListenerCallback ) {
+	constructor( enabled : boolean, config : UDPBothDef, logger : Logger, callback : OSCListenerCallback ) {
 		if ( typeof logger !== 'object' ) {
 			throw new ConnectionError( 'logger needed' )
 		}
@@ -357,9 +360,10 @@ export class UDPBoth {
 		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
 	}
 
-	isSender()   : this is UDPSender   { return false}
-	isListener() : this is UDPListener { return false}
-	isBoth()     : this is UDPBoth     { return true}
+	isSender()    : this is UDPSender   { return false}
+	isListener()  : this is UDPListener { return false}
+	isBoth()      : this is UDPBoth     { return true}
+	isTCPClient() : this is TCPClient   { return false}
 	ok()         : boolean { return this.#socket !== null }
 
 	send( buffer : Buffer<ArrayBufferLike> ) {
@@ -399,9 +403,188 @@ export class UDPBoth {
 	}
 }
 
+//MARK: TCP encode/decode
+
+function TCPDecodePL( b : string | Buffer<ArrayBufferLike>, log : Logger ) : Buffer<ArrayBufferLike> {
+	const decodeBuffer  = ( typeof b === 'string' ) ? Buffer.from( b ) : b
+	const definedLength = decodeBuffer.subarray( 0, 4 ).readInt32BE()
+	if ( decodeBuffer.length !== definedLength + 4 ) {
+		log.info( `discarding malformed packet, expected : ${definedLength + 4} , actual ${decodeBuffer.length}` )
+		return Buffer.alloc( 0 )
+	}
+	return decodeBuffer.subarray( 4 )
+}
+
+function TCPEncodePL( b : Buffer<ArrayBufferLike> ) {
+	const lenBuffer = Buffer.alloc( 4 )
+	lenBuffer.writeInt32BE( b.length )
+	return Buffer.concat( [lenBuffer, b] )
+}
+
+function TCPDecodeSLIP( b : string | Buffer<ArrayBufferLike> ) : Buffer<ArrayBufferLike> {
+	const decodeBuffer  = ( typeof b === 'string' ) ? Buffer.from( b ) : b
+	const decoded = [...slip.decode( [decodeBuffer] )]
+	return decoded[0]
+}
+
+function TCPEncodeSLIP( b : Buffer<ArrayBufferLike> ) {
+	const encoded = [...slip.encode( [b] )]
+	return encoded[0]
+}
+
+//MARK: TCPClient
+
+export type TCPClientDef = {
+	sendAddress : string,
+	sendPort    : number,
+	spec        : '1.0' | '1.1',
+	type        : 'tcp-client'
+}
+
+export class TCPClient {
+	#lastSix        : number[] = []
+	#client         : net.Socket | null = null
+	#ready          : boolean = false
+	#spec         ! : '1.0' | '1.1'
+	callback        : OSCListenerCallback
+	enabled         : boolean = true
+	sendAddress   ! : IPv4Address
+	sendPort      ! : IPv4Port
+	log             : Logger
+
+	constructor( enabled : boolean, config : TCPClientDef, logger : Logger, callback : OSCListenerCallback ) {
+		if ( typeof logger !== 'object' ) {
+			throw new ConnectionError( 'logger needed' )
+		}
+		if ( ! ( typeof callback === 'function' ) ) {
+			throw new ConnectionError( 'callback needed' )
+		}
+		this.callback = callback
+		this.log      = logger
+		this.enabled  = enabled
+		this.#spec    = config.spec
+
+		try {
+			if ( isIPv4( config.sendAddress ) ) {
+				this.sendAddress = config.sendAddress
+			}
+			if ( isIPv4Port( config.sendPort ) ) {
+				this.sendPort = config.sendPort
+			}
+		} catch( err ) {
+			if ( err instanceof ConnectionError ) {
+				this.log.error( err.message )
+				throw new ConnectionError( `unable to create TCPClient connection :: ${err.message}` )
+			}
+			throw err
+		}
+
+		this.open()
+	}
+
+	close() {
+		if ( this.#client !== null ) {
+			this.#client.end()
+			this.#ready = false
+		}
+	}
+
+	open() {
+		this.#lastSix.length = 0
+		if ( !this.enabled ) {
+			return
+		}
+		try {
+			this.#client = net.createConnection( this.sendPort, this.sendAddress )
+
+			this.#client.on( 'data', ( buffer ) => {
+				if ( this.#lastSix.length > 20 ) {
+					this.#lastSix.shift()
+				}
+				this.#lastSix.push( ( new Date() ).getTime() )
+
+				this.callback( this.#spec === '1.0' ?
+					TCPDecodePL( buffer, this.log ) :
+					TCPDecodeSLIP( buffer )
+				)
+			} )
+
+			this.#client.on( 'error', ( err ) => {
+				this.log.error( `client error, closing :: ${err.message}` )
+				this.#ready = false
+				this.close()
+			} )
+
+			this.#client.on( 'end', () => {
+				this.log.info( 'connection closed' )
+				this.#ready = false
+			} )
+
+			this.#client.on( 'connect', () => {
+				this.log.info( 'connection opened' )
+				this.#ready = true
+			} )
+
+		} catch( err ) {
+			if ( err instanceof Error ) {
+				this.log.error( `connection bind error :: ${err.message}` )
+			} else {
+				this.log.error( 'connection bind error :: unknown' )
+			}
+			this.#client = null
+		}
+
+	}
+
+	get sinceEver() { return this.#lastSix.length !== 0 }
+	get sinceLast() {
+		if ( this.#lastSix.length === 0 ) {
+			return Infinity
+		}
+		return ( new Date() ).getTime() - this.#lastSix[this.#lastSix.length - 1]
+	}
+
+	get frequency() {
+		if ( this.#lastSix.length < 2 ) {
+			return 0
+		}
+		const lenMinOne = this.#lastSix.length - 1
+		return this.#lastSix.length / ( ( this.#lastSix[lenMinOne] - this.#lastSix[0] ) / 1000 )
+	}
+
+	isSender()    : this is UDPSender   { return false}
+	isListener()  : this is UDPListener { return false}
+	isBoth()      : this is UDPBoth     { return false}
+	isTCPClient() : this is TCPClient  { return true}
+	// isTCPServer() : this is TCPServer  { return false}
+
+	ok()         : boolean { return this.#ready }
+
+	send( buffer : Buffer<ArrayBufferLike> ) {
+		if ( this.#ready === true && this.#client?.writable ) {
+			this.#client.write( this.#spec === '1.0' ?
+				TCPEncodePL( buffer ) :
+				TCPEncodeSLIP( buffer )
+			)
+		} else {
+			this.log.warn( `send to ${this.sendAddress}:${this.sendPort} failed :: socket not open` )
+		}
+	}
+
+	toJSON() : TCPClientDef {
+		return {
+			sendAddress   : this.sendAddress,
+			sendPort      : this.sendPort,
+			spec          : this.#spec,
+			type          : 'tcp-client',
+		}
+	}
+}
+
 // MARK: ConnectionDef
+export type ConnectionDefTypes = UDPListenerDef | UDPSenderDef | UDPBothDef | TCPClientDef
 export type ConnectionDef = {
-	connectionPrime      : UDPListenerDef | UDPSenderDef | UDPBothDef
+	connectionPrime      : ConnectionDefTypes
 	enabled              : boolean
 	forwarders           : UDPSenderDef[]
 	name                 : string
@@ -416,7 +599,7 @@ export class Connection extends EventEmitter {
 	#heartbeatBuffer     : Buffer<ArrayBufferLike> | null = null
 	#heartbeatInterval   : ReturnType<typeof setInterval> | null = null
 	#log                 : Logger
-	connectionPrime      : UDPListener | UDPSender | UDPBoth
+	connectionPrime      : UDPListener | UDPSender | UDPBoth | TCPClient
 	enabled              : boolean = true
 	forwarders           : UDPSender[] = []
 	name                 : string
@@ -438,9 +621,9 @@ export class Connection extends EventEmitter {
 		}
 	}
 
-	#emitMessage( v : UDPListenEvent ) { this.emit( 'message', v ) }
+	#emitMessage( v : OSCListenEvent ) { this.emit( 'message', v ) }
 
-	#unwrapPacket( v : OSCMessage | OSCBundle | OSCBundleMessage, emitObj : UDPListenEventPart ) {
+	#unwrapPacket( v : OSCMessage | OSCBundle | OSCBundleMessage, emitObj : OSCListenEventPart ) {
 		if ( Buffer.isBuffer( v ) ) {
 			return
 		}
@@ -463,15 +646,15 @@ export class Connection extends EventEmitter {
 		if ( Buffer.isBuffer( b ) && b.length !== 0 ) {
 			for ( const forwarder of this.forwarders ) { forwarder.send( b ) }
 		}
-		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth() ) {
+		if ( this.connectionPrime.isListener() || this.connectionPrime.isBoth()  || this.connectionPrime.isTCPClient() ) {
 			try {
 				const message = OSCPacket.fromBuffer( b )
 
 				const emitObj = {
-					address    : this.connectionPrime.listenAddress,
+					address    : this.connectionPrime.isTCPClient() ? this.connectionPrime.sendAddress : this.connectionPrime.listenAddress,
 					bundleTime : false,
 					name       : this.name,
-					port       : this.connectionPrime.listenPort,
+					port       : this.connectionPrime.isTCPClient() ? this.connectionPrime.sendPort : this.connectionPrime.listenPort,
 					timestamp  : ( new Date() ).getTime(),
 				}
 
@@ -518,8 +701,12 @@ export class Connection extends EventEmitter {
 			this.connectionPrime = new UDPSender( v.connectionPrime, this.#log )
 		} else if ( v.connectionPrime.type === 'both' ) {
 			this.connectionPrime = new UDPBoth( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
-		} else {
+		} else if ( v.connectionPrime.type === 'listen' ) {
 			this.connectionPrime = new UDPListener( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
+		} else if ( v.connectionPrime.type === 'tcp-client' ) {
+			this.connectionPrime = new TCPClient( this.enabled, v.connectionPrime, this.#log, ( b ) => { this.oscInputCallback( b ) } )
+		} else {
+			throw new Error( 'invalid connection type' )
 		}
 
 		if ( Array.isArray( v.forwarders ) && v.forwarders.length !== 0 ) {

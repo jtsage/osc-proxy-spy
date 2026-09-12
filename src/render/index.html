@@ -115,6 +115,7 @@
 												<option value="sender">send only</option>
 												<option value="listen">listen only</option>
 												<option value="both">send and listen</option>
+												<option value="tcp-client">tcp client</option>
 											</select>
 										</div>
 										<div class="col-4 p-1 border fw-bold align-content-center">Enabled</div>
@@ -148,6 +149,13 @@
 										<div class="col-2 p-1 border text-end">
 											<input class="form-control-sm form-control w-100" type="number" disabled id="connect-out-port">
 											<div class="invalid-feedback">1024-65535</div>
+										</div>
+										<div class="col-4 p-1 border fw-bold align-content-center">TCP Mode</div>
+										<div class="col-8 p-1 border">
+											<select class="form-select form-select-sm w-100" id="connect-tcp-mode" disabled>
+												<option value="1.0">1.0 - Packet Length</option>
+												<option value="1.1">1.1 - SLIP</option>
+											</select>
 										</div>
 									</div>
 

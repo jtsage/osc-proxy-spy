@@ -7,7 +7,7 @@
  * (c) JTSage <https://github.com/jtsage/osc-proxy-spy> */
 
 import { OSCArgObject } from 'simple-osc-lib/type'
-import { UDPListenEvent, UDPListenFreqEvent } from '../../src/lib/connection'
+import { OSCListenEvent, OSCListenFreqEvent, ConnectionDefTypes, UDPListenerDef, UDPBothDef, UDPSenderDef, TCPClientDef } from '../../src/lib/connection'
 
 // MARK: safe element ops
 export const listenToId = ( id : string, type : string, func : EventListenerOrEventListenerObject ) => {
@@ -179,9 +179,9 @@ export const clearDisplay = () => { setInnerHTML( 'osc-data-container', '' ) }
 
 // MARK: osc Messages
 
-export const buildUDPListenEvent = ( v : UDPListenEvent ) => { safeAppend( 'osc-data-container', oscBuildMessage( v ) ) }
+export const buildOSCListenEvent = ( v : OSCListenEvent ) => { safeAppend( 'osc-data-container', oscBuildMessage( v ) ) }
 
-export const replaceUDPListenEvent = ( v : UDPListenEvent ) => {
+export const replaceOSCListenEvent = ( v : OSCListenEvent ) => {
 	if ( ! oscReplaceMessage( v ) ) {
 		safeAppend( 'osc-data-container', oscBuildMessage( v ) )
 	}
@@ -190,7 +190,7 @@ export const replaceUDPListenEvent = ( v : UDPListenEvent ) => {
 // eslint-disable-next-line @stylistic/newline-per-chained-call
 const getHumanDate = ( v : Date ) => `${v.getHours().toString().padStart( 2, '0' )}:${v.getMinutes().toString().padStart( 2, '0' )}:${v.getSeconds().toString().padStart( 2, '0' )}.${v.getMilliseconds().toString().padStart( 3, '0' )}`
 
-const oscBuildMessage = ( v : UDPListenEvent ) : string => {
+const oscBuildMessage = ( v : OSCListenEvent ) : string => {
 	const humanDate   = getHumanDate( new Date( v.timestamp ) )
 	const humanBundle = typeof v.bundleTime === 'number' ? v.timestamp - v.bundleTime : v.bundleTime
 
@@ -211,7 +211,7 @@ const oscBuildMessage = ( v : UDPListenEvent ) : string => {
 	].join( '' )
 }
 
-const oscReplaceMessage = ( v : UDPListenEvent ) : boolean => {
+const oscReplaceMessage = ( v : OSCListenEvent ) : boolean => {
 	const current = document.querySelector( `div[data-address="${v.message.address}"][data-connection="${v.name}"]` )
 
 	if ( current === null ) {
@@ -279,7 +279,7 @@ export const OSCDisplayParts = {
 }
 
 // MARK: osc tick
-export const freqEntry = ( v : UDPListenFreqEvent ) => {
+export const freqEntry = ( v : OSCListenFreqEvent ) => {
 	const timeString     = `${( Math.round( v.average * 10 ) / 10 ).toFixed( 1 )} m/s`
 	const sinceString    = ( v.since > 10000 ) ? '>10s' : `${( v.since / 1000 ).toFixed( 2 )}s`
 	const thisColorClass = ! v.ever ? 'osc-tick-name-bad' : v.since > 10000 ? 'osc-tick-name-maybe' : 'osc-tick-name-good'
@@ -318,3 +318,21 @@ export const makeDropDownCheck = ( dropName : string, value : string, inList : b
 	`<label class="form-check-label">${value}</label>`,
 	'</div>',
 ].join( '' )
+
+// MARK: type utility
+export type conType = 'listen' | 'sender' | 'both' | 'tcp-client'
+
+export const conCanHear = ( connection : ConnectionDefTypes ) : connection is UDPListenerDef | UDPBothDef | TCPClientDef => conTypeCanHear( connection.type )
+export const conTypeCanHear = ( type : conType ) => ( type === 'listen' || type === 'both' || type === 'tcp-client' )
+
+export const conCanSend = ( connection : ConnectionDefTypes ) : connection is UDPSenderDef | UDPBothDef | TCPClientDef => conTypeCanSend( connection.type )
+export const conTypeCanSend = ( type : conType ) => ( type === 'sender' || type === 'both' || type === 'tcp-client' )
+
+export const conHasListen = ( connection : ConnectionDefTypes ) : connection is UDPListenerDef | UDPBothDef => conTypeHasListen( connection.type )
+export const conTypeHasListen = ( type : conType ) => ( type === 'listen' || type === 'both' )
+
+export const conHasSend   = ( connection : ConnectionDefTypes ) : connection is UDPSenderDef | UDPBothDef | TCPClientDef => conTypeHasSend( connection.type )
+export const conTypeHasSend   = ( type : conType ) => ( type === 'sender' || type === 'both' || type === 'tcp-client' )
+
+export const conIsTCP   = ( connection : ConnectionDefTypes ) : connection is TCPClientDef => conTypeIsTCP( connection.type )
+export const conTypeIsTCP   = ( type : conType ) => ( type === 'tcp-client' )
