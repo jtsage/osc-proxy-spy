@@ -438,8 +438,9 @@ const updateConnectionData = ( thisConn : ConnectionDef, i : number ) => {
 	}
 
 	const fwdHTML = thisConn.forwarders.map( ( x, idx ) => [
-		`<div class="col-3 p-1 border"><input data-fwd-index="${idx}" id="connect-fwd-a-${idx}" pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" name="fwd_address[]" type="text" class="form-control form-control-sm w-100 fwd-address" value="${x.sendAddress}"><div class="invalid-feedback">Invalid IP</div></div>`,
-		`<div class="col-2 p-1 border"><input data-fwd-index="${idx}" id="connect-fwd-p-${idx}" min="1024" max="65535" name="fwd_port[]" type="number" class="form-control form-control-sm w-100 fwd-port" value="${x.sendPort}"><div class="invalid-feedback">1024-65535</div></div>`,
+		`<div class="col-3 p-1 border"><input data-fwd-index="${idx}" id="connect-fwd-a-${idx}" pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" name="fwd_address[]" type="text" class="form-control form-control-sm w-100 fwd-address" value="${x.type === 'tcp-server' ? x.listenAddress : x.sendAddress}"><div class="invalid-feedback">Invalid IP</div></div>`,
+		`<div class="col-2 p-1 border"><input data-fwd-index="${idx}" id="connect-fwd-p-${idx}" min="1024" max="65535" name="fwd_port[]" type="number" class="form-control form-control-sm w-100 fwd-port" value="${x.type === 'tcp-server' ? x.listenPort : x.sendPort}"><div class="invalid-feedback">1024-65535</div></div>`,
+		`<div class="col-4 p-1 border">${util.forwardTypeDrop( idx, x.type === 'sender' ? 'udp' : `${x.type}-${x.spec}` )}</div>`,
 		`<div class="col-1 p-1 border text-center"><div class="btn btn-sm btn-danger fwd-delete" data-fwd-index="${idx}"><i class="bi bi-trash"></i></div></div>`,
 		'<div class="col-6"></div>',
 	].join( '' ) )
@@ -461,7 +462,40 @@ const updateConnectionData = ( thisConn : ConnectionDef, i : number ) => {
 	}
 	const fwdAddressFields = util.getId( 'connect-forwarders' )?.querySelectorAll( '.fwd-address' )
 	const fwdPortFields    = util.getId( 'connect-forwarders' )?.querySelectorAll( '.fwd-port' )
+	const fwdTypeFields    = util.getId( 'connect-forwarders' )?.querySelectorAll( '.fwd-type' )
 
+	if ( fwdTypeFields !== null && typeof fwdTypeFields !== 'undefined' ) {
+		for ( const element of fwdTypeFields ) {
+			element.addEventListener( 'change', ( e ) => {
+				if ( e.currentTarget instanceof HTMLSelectElement && currentEdit !== null ) {
+					const newType    = e.currentTarget.value
+					const index      = parseInt( e.currentTarget.getAttribute( 'data-fwd-index' ) ?? '0' )
+					const oldRecord  = currentEdit.data.forwarders[index]
+					const oldAddress = oldRecord.type === 'tcp-server' ? oldRecord.listenAddress : oldRecord.sendAddress
+					const oldPort    = oldRecord.type === 'tcp-server' ? oldRecord.listenPort : oldRecord.sendPort
+					switch ( newType ) {
+						case 'tcp-server-1.0' :
+							currentEdit.data.forwarders[index] = { listenAddress : oldAddress, listenPort : oldPort, spec : '1.0', type : 'tcp-server' }
+							break
+						case 'tcp-server-1.1' :
+							currentEdit.data.forwarders[index] = { listenAddress : oldAddress, listenPort : oldPort, spec : '1.1', type : 'tcp-server' }
+							break
+						case 'tcp-client-1.0' :
+							currentEdit.data.forwarders[index] = { sendAddress : oldAddress, sendPort : oldPort, spec : '1.0', type : 'tcp-client' }
+							break
+						case 'tcp-client-1.1' :
+							currentEdit.data.forwarders[index] = { sendAddress : oldAddress, sendPort : oldPort, spec : '1.1', type : 'tcp-client' }
+							break
+						default :
+							currentEdit.data.forwarders[index] = { sendAddress : oldAddress, sendPort : oldPort, type : 'sender' }
+							break
+					}
+					updateConnectionData( currentEdit.data, currentEdit.index )
+					saveOk()
+				}
+			} )
+		}
+	}
 	if ( fwdAddressFields !== null && typeof fwdAddressFields !== 'undefined' ) {
 		for ( const element of fwdAddressFields ) {
 			element.addEventListener( 'change', ( e ) => {
@@ -469,7 +503,11 @@ const updateConnectionData = ( thisConn : ConnectionDef, i : number ) => {
 					const newAddress = e.currentTarget.value
 					const index = parseInt( e.currentTarget.getAttribute( 'data-fwd-index' ) ?? '0' )
 					if ( isIPv4( newAddress ) ) {
-						currentEdit.data.forwarders[index].sendAddress = newAddress
+						if ( currentEdit.data.forwarders[index].type === 'tcp-server' ) {
+							currentEdit.data.forwarders[index].listenAddress = newAddress
+						} else {
+							currentEdit.data.forwarders[index].sendAddress = newAddress
+						}
 						saveOk()
 					} else {
 						saveOk( true )
@@ -486,7 +524,11 @@ const updateConnectionData = ( thisConn : ConnectionDef, i : number ) => {
 					const newPort = parseInt( e.currentTarget.value ?? '0' )
 					const index   = parseInt( e.currentTarget.getAttribute( 'data-fwd-index' ) ?? '0' )
 					if ( newPort > 1023 && newPort < 65536 ) {
-						currentEdit.data.forwarders[index].sendPort = newPort
+						if ( currentEdit.data.forwarders[index].type === 'tcp-server' ) {
+							currentEdit.data.forwarders[index].listenPort = newPort
+						} else {
+							currentEdit.data.forwarders[index].sendPort = newPort
+						}
 						saveOk()
 					} else {
 						saveOk( true )

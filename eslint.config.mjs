@@ -60,6 +60,7 @@ export default defineConfig( [
 				'SwitchStatement'         : 'always',
 				'TryStatementBlock'       : 'always',
 				'TryStatementHandler'     : 'always',
+				'TSModuleBlock'           : 'always',
 				'WhileStatement'          : { 'multiline' : true, 'minElements' : 3, 'consistent' : true },
 			}],
 

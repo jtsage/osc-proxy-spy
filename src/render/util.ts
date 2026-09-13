@@ -323,6 +323,16 @@ export const makeDropDownCheck = ( dropName : string, value : string, inList : b
 	'</div>',
 ].join( '' )
 
+export const forwardTypeDrop = ( idx : number, selected : string ) => [
+	`<select class="form-select form-select-sm w-100 fwd-type" data-fwd-index="${idx}" id="connect-fwd-p-${idx}" disabled>`,
+	`<option value="udp" ${selected === 'udp' ? 'selected' : ''}>UDP</option>`,
+	`<option value="tcp-client-1.0" ${selected === 'tcp-client-1.0' ? 'selected' : ''}>TCP Client 1.0</option>`,
+	`<option value="tcp-client-1.1" ${selected === 'tcp-client-1.1' ? 'selected' : ''}>TCP Client 1.1 SLIP</option>`,
+	`<option value="tcp-server-1.0" ${selected === 'tcp-server-1.0' ? 'selected' : ''}>TCP Server 1.0</option>`,
+	`<option value="tcp-server-1.1" ${selected === 'tcp-server-1.1' ? 'selected' : ''}>TCP Server 1.1 SLIP</option>`,
+	'</select>',
+].join( '' )
+
 // MARK: type utility
 export type conType = 'listen' | 'sender' | 'both' | 'tcp-client' | 'tcp-server'
 

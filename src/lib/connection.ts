@@ -10,7 +10,7 @@ import { Logger, MainLogger } from './logger'
 import dgram                  from 'node:dgram'
 import EventEmitter           from 'node:events'
 import net                    from 'node:net'
-import * as slip              from 'protocol-slip'
+import * as slip              from 'slip'
 import { OSCMessage, OSCArgObject, OSCPacket, OSCBundle, OSCBundleMessage } from 'simple-osc-lib'
 import { OSCMessageObject } from 'simple-osc-lib/type'
 
@@ -409,14 +409,13 @@ export class UDPBoth {
 
 //MARK: TCP encode/decode
 
-function TCPDecodePL( b : string | Buffer<ArrayBufferLike>, log : Logger ) : Buffer<ArrayBufferLike> {
-	const decodeBuffer  = ( typeof b === 'string' ) ? Buffer.from( b ) : b
-	const definedLength = decodeBuffer.subarray( 0, 4 ).readInt32BE()
-	if ( decodeBuffer.length !== definedLength + 4 ) {
-		log.info( `discarding malformed packet, expected : ${definedLength + 4} , actual ${decodeBuffer.length}` )
-		return Buffer.alloc( 0 )
+function TCPDecodePL( b : Buffer<ArrayBufferLike> ) : [Buffer<ArrayBufferLike>, Buffer<ArrayBufferLike>] {
+	const definedLength = b.subarray( 0, 4 ).readInt32BE()
+
+	if ( b.length >= definedLength + 4 ) {
+		return [b.subarray( 4, definedLength + 4 ), b.subarray( definedLength + 4 )]
 	}
-	return decodeBuffer.subarray( 4 )
+	return [Buffer.alloc( 0 ), b]
 }
 
 function TCPEncodePL( b : Buffer<ArrayBufferLike> ) {
@@ -425,16 +424,6 @@ function TCPEncodePL( b : Buffer<ArrayBufferLike> ) {
 	return Buffer.concat( [lenBuffer, b] )
 }
 
-function TCPDecodeSLIP( b : string | Buffer<ArrayBufferLike> ) : Buffer<ArrayBufferLike> {
-	const decodeBuffer  = ( typeof b === 'string' ) ? Buffer.from( b ) : b
-	const decoded = [...slip.decode( [decodeBuffer] )]
-	return decoded[0]
-}
-
-function TCPEncodeSLIP( b : Buffer<ArrayBufferLike> ) {
-	const encoded = [...slip.encode( [b] )]
-	return encoded[0]
-}
 
 //MARK: TCPClient
 
@@ -454,21 +443,34 @@ export class TCPClient {
 	enabled         : boolean = true
 	sendAddress   ! : IPv4Address
 	sendPort      ! : IPv4Port
+	sendOnly        : boolean = false
 	log             : Logger
 	retryAttempts   : number = 0
 	retryTimeout    : ReturnType<typeof setTimeout> | null = null
+	#dataChunks     : Array<Buffer<ArrayBufferLike>> = []
+	#dataTimeout    : ReturnType<typeof setTimeout> | null = null
+	#slipInstance   : slip.Decoder | null = null
 
-	constructor( enabled : boolean, config : TCPClientDef, logger : Logger, callback : OSCListenerCallback ) {
+	constructor( enabled : boolean, config : TCPClientDef, logger : Logger, callback : OSCListenerCallback, sendOnly = false ) {
 		if ( typeof logger !== 'object' ) {
 			throw new ConnectionError( 'logger needed' )
 		}
 		if ( ! ( typeof callback === 'function' ) ) {
 			throw new ConnectionError( 'callback needed' )
 		}
+		this.sendOnly = sendOnly
 		this.callback = callback
 		this.log      = logger
 		this.enabled  = enabled
 		this.#spec    = config.spec
+
+		if ( this.#spec === '1.1' ) {
+			this.#slipInstance = new slip.Decoder( {
+				onMessage      : ( msg : Uint8Array ) => { this.callback( Buffer.from( msg ) ) },
+				maxMessageSize : 209715200,
+				bufferSize     : 2048,
+			} )
+		}
 
 		try {
 			if ( isIPv4( config.sendAddress ) ) {
@@ -495,6 +497,18 @@ export class TCPClient {
 		}
 	}
 
+	#processData() {
+		const result = TCPDecodePL( Buffer.concat( this.#dataChunks ) )
+		this.#dataChunks.length = 0
+		this.#dataChunks.push( result[1] )
+		if ( result[0].length !== 0 ) {
+			this.callback( result[0] )
+		}
+		if ( result[1].length !== 0 ) {
+			this.#dataTimeout = setTimeout( () => this.#processData(), 100 )
+		}
+	}
+
 	open() {
 		this.#lastSix.length = 0
 		this.retryAttempts++
@@ -505,17 +519,28 @@ export class TCPClient {
 		try {
 			this.#client = net.createConnection( this.sendPort, this.sendAddress )
 
-			this.#client.on( 'data', ( buffer ) => {
-				if ( this.#lastSix.length > 20 ) {
-					this.#lastSix.shift()
-				}
-				this.#lastSix.push( ( new Date() ).getTime() )
+			if ( ! this.sendOnly ) {
+				this.#client.on( 'data', ( buffer ) => {
+					if ( this.#dataTimeout !== null ) {
+						clearTimeout( this.#dataTimeout )
+						this.#dataTimeout = null
+					}
 
-				this.callback( this.#spec === '1.0' ?
-					TCPDecodePL( buffer, this.log ) :
-					TCPDecodeSLIP( buffer )
-				)
-			} )
+					if ( this.#lastSix.length > 20 ) {
+						this.#lastSix.shift()
+					}
+					this.#lastSix.push( ( new Date() ).getTime() )
+
+					const thisBuffer = typeof buffer === 'string' ? Buffer.from( buffer ) : buffer
+
+					if ( this.#spec === '1.0' ) {
+						this.#dataChunks.push( thisBuffer )
+						this.#processData()
+					} else {
+						this.#slipInstance!.decode( thisBuffer )
+					}
+				} )
+			}
 
 			this.#client.on( 'error', ( err ) => {
 				this.log.error( `client error, closing :: ${err.message}` )
@@ -551,7 +576,6 @@ export class TCPClient {
 			}
 			this.#client = null
 		}
-
 	}
 
 	get sinceEver() { return this.#lastSix.length !== 0 }
@@ -582,7 +606,7 @@ export class TCPClient {
 		if ( this.#ready === true && this.#client?.writable ) {
 			this.#client.write( this.#spec === '1.0' ?
 				TCPEncodePL( buffer ) :
-				TCPEncodeSLIP( buffer )
+				slip.encode( buffer )
 			)
 		} else {
 			this.log.warn( `send to ${this.sendAddress}:${this.sendPort} failed :: socket not open` )
@@ -599,7 +623,7 @@ export class TCPClient {
 	}
 }
 
-//MARK: TCPClient
+//MARK: TCPServer
 
 export type TCPServerDef = {
 	listenAddress : string,
@@ -618,19 +642,32 @@ export class TCPServer {
 	listenAddress ! : IPv4Address
 	listenPort    ! : IPv4Port
 	log             : Logger
+	sendOnly        : boolean = false
 	socketList      : Set<net.Socket> = new Set()
+	#dataChunks     : Array<Buffer<ArrayBufferLike>> = []
+	#dataTimeout    : ReturnType<typeof setTimeout> | null = null
+	#slipInstance   : slip.Decoder | null = null
 
-	constructor( enabled : boolean, config : TCPServerDef, logger : Logger, callback : OSCListenerCallback ) {
+	constructor( enabled : boolean, config : TCPServerDef, logger : Logger, callback : OSCListenerCallback, sendOnly = false ) {
 		if ( typeof logger !== 'object' ) {
 			throw new ConnectionError( 'logger needed' )
 		}
 		if ( ! ( typeof callback === 'function' ) ) {
 			throw new ConnectionError( 'callback needed' )
 		}
+		this.sendOnly = sendOnly
 		this.callback = callback
 		this.log      = logger
 		this.enabled  = enabled
 		this.#spec    = config.spec
+
+		if ( this.#spec === '1.1' ) {
+			this.#slipInstance = new slip.Decoder( {
+				onMessage      : ( msg : Uint8Array ) => { this.callback( Buffer.from( msg ) ) },
+				maxMessageSize : 209715200,
+				bufferSize     : 2048,
+			} )
+		}
 
 		try {
 			if ( isIPv4( config.listenAddress ) ) {
@@ -648,6 +685,18 @@ export class TCPServer {
 		}
 
 		this.open()
+	}
+
+	#processData() {
+		const result = TCPDecodePL( Buffer.concat( this.#dataChunks ) )
+		this.#dataChunks.length = 0
+		this.#dataChunks.push( result[1] )
+		if ( result[0].length !== 0 ) {
+			this.callback( result[0] )
+		}
+		if ( result[1].length !== 0 ) {
+			this.#dataTimeout = setTimeout( () => this.#processData(), 100 )
+		}
 	}
 
 	close() {
@@ -678,17 +727,28 @@ export class TCPServer {
 						this.log.info( `${socket.remoteAddress}:${socket.remotePort} unknown error` )
 					}
 				} )
-				socket.on( 'data', ( buffer ) => {
-					if ( this.#lastSix.length > 20 ) {
-						this.#lastSix.shift()
-					}
-					this.#lastSix.push( ( new Date() ).getTime() )
+				if ( ! this.sendOnly ) {
+					socket.on( 'data', ( buffer ) => {
+						if ( this.#dataTimeout !== null ) {
+							clearTimeout( this.#dataTimeout )
+							this.#dataTimeout = null
+						}
+						
+						if ( this.#lastSix.length > 20 ) {
+							this.#lastSix.shift()
+						}
+						this.#lastSix.push( ( new Date() ).getTime() )
 
-					this.callback( this.#spec === '1.0' ?
-						TCPDecodePL( buffer, this.log ) :
-						TCPDecodeSLIP( buffer )
-					)
-				} )
+						const thisBuffer = typeof buffer === 'string' ? Buffer.from( buffer ) : buffer
+
+						if ( this.#spec === '1.0' ) {
+							this.#dataChunks.push( thisBuffer )
+							this.#processData()
+						} else {
+							this.#slipInstance!.decode( thisBuffer )
+						}
+					} )
+				}
 			} )
 
 			this.#server.on( 'error', ( err ) => {
@@ -748,7 +808,7 @@ export class TCPServer {
 			for ( const socket of this.socketList ) {
 				socket.write( this.#spec === '1.0' ?
 					TCPEncodePL( buffer ) :
-					TCPEncodeSLIP( buffer )
+					slip.encode( buffer )
 				)
 			}
 		} else {
@@ -771,7 +831,7 @@ export type ConnectionDefTypes = UDPListenerDef | UDPSenderDef | UDPBothDef | TC
 export type ConnectionDef = {
 	connectionPrime      : ConnectionDefTypes
 	enabled              : boolean
-	forwarders           : UDPSenderDef[]
+	forwarders           : Array<UDPSenderDef | TCPClientDef | TCPServerDef>
 	name                 : string
 	oscHeartBeatAddress  : string | null
 	oscHeartBeatArgs     : OSCArgObject[]
@@ -786,7 +846,7 @@ export class Connection extends EventEmitter {
 	#log                 : Logger
 	connectionPrime      : UDPListener | UDPSender | UDPBoth | TCPClient | TCPServer
 	enabled              : boolean = true
-	forwarders           : UDPSender[] = []
+	forwarders           : Array<UDPSender | TCPClient | TCPServer> = []
 	name                 : string
 	oscHeartBeatEnabled  : boolean = false
 	oscHeartBeatAddress  : string | null = null
@@ -899,9 +959,13 @@ export class Connection extends EventEmitter {
 		if ( Array.isArray( v.forwarders ) && v.forwarders.length !== 0 ) {
 			try {
 				for ( const item of v.forwarders ) {
-					this.forwarders.push(
-						new UDPSender( item, this.#log )
-					)
+					if ( item.type === 'sender' ) {
+						this.forwarders.push( new UDPSender( item, this.#log ) )
+					} else if ( item.type === 'tcp-client' ) {
+						this.forwarders.push( new TCPClient( true, item, this.#log, () => {}, true ) )
+					} else if ( item.type === 'tcp-server' ) {
+						this.forwarders.push( new TCPServer( true, item, this.#log, () => {}, true ) )
+					}
 				}
 			} catch( err ) {
 				if ( err instanceof ConnectionError ) {
