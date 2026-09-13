@@ -8,7 +8,7 @@
 
 import { SettingsDef } from 'src/lib/settings'
 import * as util from './util'
-import { ConnectionDef } from 'src/lib/connection'
+import { ConnectionDef, TCPClientDef, UDPSenderDef } from 'src/lib/connection'
 import * as bootstrap from 'bootstrap'
 import { FoundService } from 'src/main'
 
@@ -61,18 +61,31 @@ export const connectStartUp = () => {
 				foundOne = true
 				const thisButton = document.createElement( 'button' )
 				thisButton.classList.add( 'btn', 'btn-primary', 'mb-2', 'w-100' )
-				thisButton.innerHTML = `${item.name} <small class="fst-italic">${item.address}:${item.port}`
+				thisButton.innerHTML = `${item.name} <small class="fst-italic">${item.protocol}::${item.address}:${item.port}`
 				thisButton.addEventListener( 'click', () => {
 					const newConNumber = conSettings.connections.length
-					conSettings.connections[newConNumber] = {
-						...defaultNewCon,
-						connectionPrime : {
+					let typeSpec : UDPSenderDef | TCPClientDef
+
+					if ( item.protocol === 'udp' ) {
+						typeSpec = {
 							sendAddress : item.address,
 							sendPort    : item.port,
 							type        : 'sender',
-						},
-						enabled : true,
-						name    : item.safe_name,
+						}
+					} else {
+						typeSpec = {
+							sendAddress : item.address,
+							sendPort    : item.port,
+							spec        : item.osc_ver as '1.0' | '1.1',
+							type        : 'tcp-client',
+						}
+					}
+
+					conSettings.connections[newConNumber] = {
+						...defaultNewCon,
+						connectionPrime : typeSpec,
+						enabled         : true,
+						name            : item.safe_name,
 					}
 					parseConnections( conSettings )
 					editConnection( newConNumber )
@@ -352,22 +365,66 @@ export const parseConnections = ( v : SettingsDef ) => {
 
 		const viewButton = document.createElement( 'button' )
 		viewButton.setAttribute( 'type', 'button' )
-		viewButton.classList.add( 'btn', 'btn-primary', 'connect-view-btn', 'w-75' )
+		viewButton.setAttribute( 'title', 'View Details' )
+		viewButton.classList.add( 'btn', 'btn-primary', 'connect-view-btn', 'w-75', 'text-start' )
 		viewButton.textContent = `${idx+1} : ${item.name}`
 		viewButton.addEventListener( 'click', () => viewConnection( idx ) )
 		btnGroup.append( viewButton )
 
 		const editButton = document.createElement( 'button' )
 		editButton.setAttribute( 'type', 'button' )
-		editButton.classList.add( 'btn', 'btn-outline-primary', 'connect-edit-btn', 'w-25' )
+		editButton.setAttribute( 'title', 'Edit Connection' )
+		editButton.classList.add( 'btn', 'btn-outline-primary', 'connect-edit-btn' )
 		editButton.innerHTML = '<i class="bi bi-pencil-square"></i>'
 		editButton.addEventListener( 'click', () => editConnection( idx ) )
 		btnGroup.append( editButton )
+
+		const onButton = document.createElement( 'button' )
+		const color = item.enabled ? 'btn-success' : 'btn-outline-danger'
+		onButton.setAttribute( 'type', 'button' )
+		onButton.setAttribute( 'title', 'Toggle Enabled' )
+		onButton.classList.add( 'btn', color, 'connect-toggle-btn' )
+		onButton.innerHTML = '<i class="bi bi-ethernet"></i>'
+		onButton.addEventListener( 'click', () => toggleConnection( idx ) )
+		btnGroup.append( onButton )
 
 		util.safeAppend( 'connect-list', btnGroup )
 	}
 }
 
+// MARK: toggle con btn
+const toggleConnection = async( i : number ) => {
+	const thisConn = conSettings.connections[i]
+
+	if ( thisConn === null ) return
+	currentEdit = { index : i, data : thisConn }
+	currentEdit.data.enabled = ! currentEdit.data.enabled
+	window.ipc.saveCon( currentEdit.index, currentEdit.data ).then( ( results ) => {
+		if ( results[0] === false ) {
+			util.badOperation()
+			saveOk( true )
+			return
+		}
+		conSettings = results[1]
+		editLockOut( false )
+		parseConnections( conSettings )
+		util.clearDisplay()
+		util.goodOperation()
+		if ( currentEdit !== null && typeof conSettings.connections[currentEdit.index] !== 'undefined' ) {
+			viewConnection( currentEdit.index )
+		} else {
+			util.setInnerHTML( 'connect-number', '0' )
+			util.classAdd( 'connect-actions', 'd-none' )
+			const allData = document.querySelectorAll( '.connect-data-row' )
+
+			for ( const element of allData ) {
+				if ( element instanceof HTMLElement ) {
+					element.classList.add( 'd-none' )
+				}
+			}
+		}
+	} )
+}
 
 // MARK: view con btn
 const viewConnection = async( i : number ) => {

@@ -281,7 +281,6 @@ export const OSCDisplayParts = {
 
 // MARK: osc tick
 export const freqEntry = ( v : OSCListenFreqEvent ) => {
-	console.log(v)
 	const timeString     = `${( Math.round( v.average * 10 ) / 10 ).toFixed( 1 )} m/s`
 	const sinceString    = ( v.since > 10000 ) ? '>10s' : `${( v.since / 1000 ).toFixed( 2 )}s`
 	const thisColorClass = ! v.ever ? 'osc-tick-name-bad' : v.since > 10000 ? 'osc-tick-name-maybe' : 'osc-tick-name-good'

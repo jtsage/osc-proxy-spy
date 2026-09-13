@@ -80,7 +80,7 @@
 								<button type="button" id="send-button-send" class="btn btn-sm btn-success rounded-0 rounded-end" disabled aria-label="Send Message"><i class="bi bi-send-check-fill"></i></button>
 							</div>
 							<div id="osc-status" class="my-2 d-flex flex-row">
-								<div class="user-select-none p-1 shadow border border-black rounded-start small">Connection Status</div>
+								<div class="user-select-none p-1 shadow border border-black rounded-start small text-center">Status</div>
 								<div class="user-select-none p-1 shadow border border-black rounded-end d-flex flex-wrap flex-row justify-content-evenly flex-grow-1" id="osc-connection-container"></div>
 							</div>
 						</div>
@@ -90,8 +90,8 @@
 						<div class="d-flex align-items-start h-100 pb-2">
 							<div class="nav flex-column w-25 flex-shrink-0 nav-pills me-3 pe-2 border-end border-secondary h-100" id="connect-pills" role="tablist" aria-orientation="vertical">
 								<div id="connect-list" class="w-100"></div>
-								<button type="button" class="btn btn-success" id="connect-add-button"><i class="bi bi-plus-square"></i> Add Connection</button>
-								<button type="button" class="btn btn-info mt-1" id="connect-discover-button"><i class="bi bi-search"></i> Discover Connection</button>
+								<button type="button" class="btn btn-success text-start" id="connect-add-button"><i class="bi bi-plus-square"></i> Add Connection</button>
+								<button type="button" class="btn btn-info mt-1 text-start" id="connect-discover-button"><i class="bi bi-search"></i> Discover Connection</button>
 							</div>
 							<div class="tab-content flex-grow-1 h-100 overflow-scroll" id="v-pills-tabContent">
 								<div class="tab-pane fade show active h-100 p-3" id="connect-tab" role="tabpanel" tabindex="0"><form id="connect-form" class="needs-validation was-validated" novalidate>
@@ -312,7 +312,7 @@
 
 		<!-- MARK: Modal Discover -->
 		<div class="modal fade" id="connect-discover" tabindex="-1">
-			<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-dialog modal-dialog-centered modal-lg">
 				<div class="modal-content">
 					<div class="modal-header">
 						<h1 class="modal-title fs-5">Add OSC Connection</h1>

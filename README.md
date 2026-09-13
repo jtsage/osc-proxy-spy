@@ -10,12 +10,19 @@ The current status of this software should be considered beta - likely it will a
 
 - Handles all well known, and a lot of obscure OSC data types. (see : [Simple-OSC-Lib](https://github.com/jtsage/node-simple-osc-lib) for types)
 - Connections can be send, listen or listen+send.
-- Listen and Listen+Send can be forwarded to any number of IP address/port combinations
-- Send and Listen+Send connections have an options "Heart Beat" option for sending the same OSC packet constantly on a delay
+- UDP Listen, UDP Listen+Send and TCP connections can be forwarded to any number of IP address/port combinations
+- UDP Send , UDP Listen+Send and TCP connections have an options "Heart Beat" option for sending the same OSC packet constantly on a delay
 - Supports filtering by connection, data type, and OSC address.
 - Can display each message as it arrives, or group the messages by Connection + OSC Address, updating the data received on each new matching packet.
 - IPv4 only, probably forever - few vendor appliances support IPv6 (light boards or sound boards), and it's not worth the extra work.
-- UDP only, non-privileged ports only.  TCP support in the future may be possible, privileged ports requires admin OS access, and is a non-trivial problem for electron applications.  The developer has never encountered an OSC device that runs on a privileged port.
+- Non-privileged ports only.  Privileged ports requires admin OS access, and is a non-trivial problem for electron applications.  The developer has never encountered an OSC device that runs on a privileged port.
+- Supports Bonjour/autoconf for finding services on the local network (requires support from the other end)
+
+## Version History
+
+- 2.0.0 - First public release
+- 2.1.0 - Add Bonjour/zeroconf discovery
+- 2.2.0 - Add TCP connections
 
 ## Main Interface
 
@@ -38,11 +45,11 @@ Messages are shown with a time stamp for when they were received.  The connectio
 
 ## Send Section
 
-The send section allows you to craft and send an arbitrary OSC message.  Choose the 'send' or 'send+listen' connection to send to, set an OSC address, and add any required OSC arguments.  The send settings persist through a program restart.
+The send section allows you to craft and send an arbitrary OSC message.  Choose the 'send', 'send+listen' or TCP connection to send to, set an OSC address, and add any required OSC arguments.  The send settings persist through a program restart.
 
 ## Status Section
 
-Connection status is shown for listen and send+listen types. It is color coded green when the connection had data in the last 10 seconds, yellow if it has been more than 10 seconds, but some data has been received since the connection was started, and red if no data has ever been received. The first time is an approximation of messages per second on the link, the second time is the time elapsed since the last data was received.
+Connection status is shown for listen and send+listen types. It is color coded green when the connection had data in the last 10 seconds, yellow if it has been more than 10 seconds, but some data has been received since the connection was started, and red if no data has ever been received. The first time is an approximation of messages per second on the link, the second time is the time elapsed since the last data was received. TCP client connections will show an warning icon when disconnected.  TCP server connections will show how many clients are connected.
 
 ## Settings
 
@@ -59,14 +66,14 @@ The "Add Connection" button lets you manually add a new connection.  The "Discov
 ### Primary
 
 - __Listen Address__ : Interface to listen on, list populated from the operating system.  The special address `0.0.0.0` means "all interfaces"
-- __Listen Port__ : UDP port to listen on, 1024-65535
+- __Listen Port__ : port to listen on, 1024-65535
 - __Send Address__ : IP Address to send to
-- __Send Port__ : UDP port to send to, 1024-65535. Same port sending is supported, it is however unlikely to function as expected for connections on the same interface.  (for instance, the X32 uses this method, but trying to run the X32 simulator on the local host will not work)
+- __Send Port__ : port to send to, 1024-65535. Same port sending is supported, it is however unlikely to function as expected for connections on the same interface.  (for instance, the X32 uses this method, but trying to run the X32 simulator on the local host will not work)
 - __TCP Mode__ : For `tcp-server` and `tcp-client` types, sets the TCP transport mode - 1.0 Packet Length or 1.1 SLIP.
 
 ### Forwarders
 
-Zero or more IP/port combinations to forward all received traffic to (UDP only at the moment).  Data is sent as-is, no modification or integrity checking is performed.
+Zero or more IP/port combinations to forward all received traffic to (UDP send or TCP).  Data is sent as-is, no modification or integrity checking is performed.
 
 ### Heartbeat
 

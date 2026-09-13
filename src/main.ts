@@ -20,7 +20,9 @@ if ( started ) {
 export type FoundService = {
 	address   : string,
 	name      : string,
+	osc_ver   : string | null,
 	port      : number,
+	protocol  : string,
 	safe_name : string,
 	type      : string,
 }
@@ -30,13 +32,11 @@ const settings    = new Settings( log )
 const bonInstance = new Bonjour()
 const services : Record<string, FoundService> = {}
 
-const UDP_OSC_Service    = bonInstance.find()
-const UDP_Known_Services = new Set( ['osc', 'qlab', 'vor-osc'] )
+const Bonjour_Services    = bonInstance.find()
+const Known_OSC_Services = new Set( ['osc', 'qlab', 'vor-osc'] )
 
-UDP_OSC_Service.on( 'up', async( service ) => {
-	console.log( service )
-	if ( service.protocol === 'tcp' ) return
-	if ( ! UDP_Known_Services.has( service.type ) ) return
+Bonjour_Services.on( 'up', async( service ) => {
+	if ( ! Known_OSC_Services.has( service.type ) ) return
 
 	let goodIP = ''
 
@@ -60,17 +60,21 @@ UDP_OSC_Service.on( 'up', async( service ) => {
 		}
 	}
 
+	const oscVer = ( service.protocol === 'tcp' ) ? service?.txt?.oscver || 1.1 : null
+
 	services[service.fqdn] = {
 		address   : goodIP,
 		name      : service.name,
+		osc_ver   : oscVer,
 		port      : service.port,
+		protocol  : service.protocol,
 		safe_name : service.name.replace( /[^A-Za-z0-9]/g, '-' ),
 		type      : service.type,
 	}
 
 } )
 
-UDP_OSC_Service.on( 'down', ( service ) => {
+Bonjour_Services.on( 'down', ( service ) => {
 	if ( service.protocol === 'tcp' ) return
 	if ( typeof services[service.fqdn] !== 'undefined' ) {
 		delete services[service.fqdn]

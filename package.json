@@ -1,7 +1,7 @@
 {
   "name": "osc-proxy-spy",
   "productName": "oscProxySpy",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "OSC Inspector and Forwarder",
   "main": ".vite/build/main.js",
   "private": true,

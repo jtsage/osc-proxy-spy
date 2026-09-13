@@ -589,7 +589,7 @@ export class TCPServer extends ConnectionType {
 
 	close() {
 		if ( this.#server !== null ) {
-			for ( const socket of this.socketList ) { socket.destroySoon() }
+			for ( const socket of this.socketList ) { socket.destroy() }
 			this.#server.close()
 			this.#ready = false
 		}
@@ -668,7 +668,6 @@ export class TCPServer extends ConnectionType {
 	}
 
 	get packetTrack_record() : OSCListenFreqEventPart {
-		console.log( 'server', this.socketList.size )
 		return  {
 			...super.packetTrack_record,
 			tcpStatus : this.socketList.size,

@@ -16,6 +16,8 @@ import { IpcType } from '../preload'
 import { OSCListenEvent, OSCListenFreqEvent } from 'src/lib/connection'
 import { SettingsDef } from 'src/lib/settings'
 import { OSCArgObject } from 'simple-osc-lib'
+
+// eslint-disable-next-line @stylistic/curly-newline
 declare global { interface Window { ipc : IpcType } }
 
 const skippableTypes : Array<OSCArgObject['type'] | 'other'> = [

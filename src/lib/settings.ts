@@ -137,7 +137,7 @@ export class Settings extends EventEmitter {
 	getFreq() {
 		const results : Connect.OSCListenFreqEvent[] = []
 		for ( const con of this.#connections ) {
-			if ( !con.connectionPrime.isSender() ) {
+			if ( !con.connectionPrime.isSender() && con.connectionPrime.enabled ) {
 				results.push( {
 					...con.connectionPrime.packetTrack_record,
 					name      : con.name,
