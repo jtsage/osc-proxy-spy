@@ -137,13 +137,10 @@ export class Settings extends EventEmitter {
 	getFreq() {
 		const results : Connect.OSCListenFreqEvent[] = []
 		for ( const con of this.#connections ) {
-			if ( con.connectionPrime.isListener() || con.connectionPrime.isBoth() || con.connectionPrime.isTCPClient() || con.connectionPrime.isTCPServer() ) {
+			if ( !con.connectionPrime.isSender() ) {
 				results.push( {
-					average   : con.connectionPrime.frequency,
-					ever      : con.connectionPrime.sinceEver,
+					...con.connectionPrime.packetTrack_record,
 					name      : con.name,
-					since     : con.connectionPrime.sinceLast,
-					tcpStatus : con.connectionPrime.isTCPClient() || con.connectionPrime.isTCPServer() ? con.connectionPrime.ok() : null,
 				} )
 			}
 		}

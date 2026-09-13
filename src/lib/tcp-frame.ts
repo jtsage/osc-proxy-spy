@@ -12,6 +12,8 @@ const SLIP_ESC = 0xdb
 const SLIP_ESC_END = 0xdc
 const SLIP_ESC_ESC = 0xdd
 
+export type encoder = ( oscBuffer : Buffer<ArrayBufferLike> ) => Buffer<ArrayBufferLike>
+
 export function encodePacketLength( oscBuffer : Buffer<ArrayBufferLike> ) : Buffer<ArrayBufferLike> {
 	const frame = Buffer.allocUnsafe( 4 + oscBuffer.length )
 	frame.writeUInt32BE( oscBuffer.length, 0 )
@@ -20,22 +22,30 @@ export function encodePacketLength( oscBuffer : Buffer<ArrayBufferLike> ) : Buff
 }
 
 export function encodeSLIP( oscBuffer : Buffer<ArrayBufferLike> ) : Buffer<ArrayBufferLike> {
-	let returnBuffer = Buffer.alloc( 0 )
+	const returnBuffer = Buffer.alloc( oscBuffer.length * 2 )
 
 	if ( oscBuffer.indexOf( SLIP_END ) === -1 && oscBuffer.indexOf( SLIP_ESC ) === -1 ) {
 		return Buffer.concat( [oscBuffer, Buffer.from( [SLIP_END] )] )
 	}
 
+	let j = 0
+
+	returnBuffer[j++] = SLIP_END
+
 	for ( const byte of oscBuffer ) {
 		if ( byte === SLIP_END ) {
-			returnBuffer = Buffer.concat( [returnBuffer, Buffer.from( [SLIP_ESC, SLIP_ESC_END] )] )
+			returnBuffer[j++] = SLIP_ESC
+			returnBuffer[j++] = SLIP_ESC_END
 		} else if ( byte === SLIP_ESC ) {
-			returnBuffer = Buffer.concat( [returnBuffer, Buffer.from( [SLIP_ESC, SLIP_ESC_ESC] )] )
+			returnBuffer[j++] = SLIP_ESC
+			returnBuffer[j++] = SLIP_ESC_ESC
 		} else {
-			returnBuffer = Buffer.concat( [returnBuffer, Buffer.from( [byte] )] )
+			returnBuffer[j++] = byte
 		}
 	}
-	return Buffer.concat( [returnBuffer, Buffer.from( [SLIP_END] )] )
+	returnBuffer[j++] = SLIP_END
+
+	return returnBuffer.subarray( 0, j )
 }
 
 
@@ -55,7 +65,7 @@ export class TCPTransportDecoder {
 		while ( this.#buffer.length !== 0 ) {
 			let isEscaped = false
 
-			const endPosition = this.#buffer.indexOf( SLIP_END )
+			const endPosition = this.#buffer.indexOf( Buffer.from( [SLIP_END] ) )
 
 			if ( endPosition === -1 ) {
 				break // Wait for more data
@@ -63,28 +73,31 @@ export class TCPTransportDecoder {
 
 			const payload = this.#buffer.subarray( 0, endPosition )
 
-			let returnBuffer = Buffer.alloc( 0 )
+			const returnBuffer = Buffer.alloc( payload.length * 2 )
 
-			this.#buffer = this.#buffer.subarray( endPosition )
+			this.#buffer = this.#buffer.subarray( endPosition + 1 )
 
-			for ( let byte of payload ) {
+			let j = 0
+			for ( const byte of payload ) {
 				if ( isEscaped && byte === SLIP_ESC_ESC ) { // esc esc
-					byte = SLIP_ESC
+					returnBuffer[j++] = SLIP_ESC
 					isEscaped = false
 				} else if ( isEscaped && byte === SLIP_ESC_END ) { // esc end
-					byte = SLIP_END
+					returnBuffer[j++] = SLIP_END
 					isEscaped = false
 				} else if ( byte === SLIP_ESC ) { // escape
 					isEscaped = true
 					continue
 				} else if ( byte === SLIP_END ) { // unexpected end
 					break
+				} else {
+					returnBuffer[j++] = byte
 				}
-
-				returnBuffer = Buffer.concat( [returnBuffer, Buffer.from( [byte] )] )
 			}
 
-			this.#onMessage( returnBuffer )
+			if ( j !== 0 ) {
+				this.#onMessage( returnBuffer.subarray( 0, j ) )
+			}
 		}
 	}
 

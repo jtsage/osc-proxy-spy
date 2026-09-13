@@ -34,6 +34,7 @@ const UDP_OSC_Service    = bonInstance.find()
 const UDP_Known_Services = new Set( ['osc', 'qlab', 'vor-osc'] )
 
 UDP_OSC_Service.on( 'up', async( service ) => {
+	console.log( service )
 	if ( service.protocol === 'tcp' ) return
 	if ( ! UDP_Known_Services.has( service.type ) ) return
 
