@@ -352,7 +352,7 @@ export const parseConnections = ( v : SettingsDef ) => {
 	const conSelect    = [`<option value="-1" ${conSelectIdx === -1 ? 'selected' : ''}>n/a</option>`]
 
 	for ( const [index, con] of conSettings.connections.entries() ) {
-		if ( util.conCanSend( con.connectionPrime ) ) {
+		if ( util.conCanSend( con.connectionPrime ) && con.enabled ) {
 			conSelect.push( `<option value="${index}" ${conSelectIdx === index ? 'selected' : ''}>[${index}] ${con.name}</option>` )
 		}
 	}
